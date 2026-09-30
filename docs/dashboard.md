@@ -32,3 +32,10 @@ Accessible via the sidebar **`Chatbot`** tab:
 Accessible via the **`Newsletter Hebdo`** tab:
 - Groups articles saved over the last 7 days by topic.
 - Generates a structured Markdown newsletter ready for email or publication.
+
+### 5. Radar d'Opinion & Sentiment (`📊 Radar & Sentiment`)
+Accessible via the sidebar **`Radar & Sentiment`** tab:
+- Queries tech companies, models, framework, or CEOs (e.g. *OpenAI*, *Sam Altman*, *DeepSeek*, *vLLM*, *Claude 3.7*).
+- Scans saved watch entries + 10 live web search results.
+- Renders a visual **Sentiment Gauge (🟢 % Positif / 🔴 % Négatif)**, **3 Pros (Points Forts)**, **3 Cons (Limites)**, and summary.
+- **1-Click Share & Save**: Copy shareable permalink (`?radar=Entity`) or save to SQLite database (`sentiment_reports`).

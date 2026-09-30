@@ -158,6 +158,11 @@
               <i class="fa-solid fa-paper-plane text-cyan-400"></i>
               <span>Newsletter Hebdo</span>
             </button>
+
+            <button onclick="switchTab('radar')" id="tab-btn-radar" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition">
+              <i class="fa-solid fa-chart-line text-emerald-400"></i>
+              <span>Radar & Sentiment</span>
+            </button>
           </nav>
         </div>
 
@@ -282,6 +287,47 @@
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- View 4: Radar & Sentiment -->
+      <div id="viewRadar" class="hidden flex-1 flex flex-col overflow-hidden">
+        <div class="h-12 px-6 flex items-center justify-between border-b border-slate-800/80 bg-slate-900/30 shrink-0">
+          <div class="flex items-center space-x-2 text-xs text-emerald-300 font-semibold">
+            <i class="fa-solid fa-chart-line text-emerald-400"></i>
+            <span>Radar & Sentiment — Analyse d'opinion sur la tech, modèles et entreprises</span>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full space-y-6">
+          <!-- Search Bar & Suggestions -->
+          <div class="glass p-5 rounded-2xl border border-slate-800 space-y-4">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-magnifying-glass-chart text-emerald-400"></i>
+              Sonder l'opinion sur une entité (Entreprise, Modèle, CEO, Techno)
+            </h3>
+
+            <form onsubmit="submitRadarSearch(event)" class="flex gap-2">
+              <input type="text" id="radarInput" placeholder="ex: OpenAI, Sam Altman, DeepSeek, vLLM, Claude 3.7, Rust..." class="flex-1 bg-slate-950 text-xs text-slate-100 px-4 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-emerald-500">
+              <button type="submit" id="radarSubmitBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center gap-1.5">
+                <span>Analyser</span>
+                <i class="fa-solid fa-bolt text-[10px]"></i>
+              </button>
+            </form>
+
+            <!-- Suggestion Badges -->
+            <div class="flex flex-wrap items-center gap-2 text-xs pt-1">
+              <span class="text-slate-500 text-[11px] font-medium">Suggestions :</span>
+              <button onclick="prefillRadarSearch('OpenAI')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">OpenAI</button>
+              <button onclick="prefillRadarSearch('Sam Altman')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">Sam Altman</button>
+              <button onclick="prefillRadarSearch('DeepSeek')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">DeepSeek</button>
+              <button onclick="prefillRadarSearch('vLLM')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">vLLM</button>
+              <button onclick="prefillRadarSearch('Claude 3.7')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">Claude 3.7</button>
+            </div>
+          </div>
+
+          <!-- Radar Results Output Container -->
+          <div id="radarResultsContainer" class="hidden space-y-5"></div>
         </div>
       </div>
 
@@ -529,18 +575,22 @@
       const viewArticles = document.getElementById('viewArticles');
       const viewChatbot = document.getElementById('viewChatbot');
       const viewNewsletter = document.getElementById('viewNewsletter');
+      const viewRadar = document.getElementById('viewRadar');
 
       if (viewArticles) viewArticles.classList.add('hidden');
       if (viewChatbot) viewChatbot.classList.add('hidden');
       if (viewNewsletter) viewNewsletter.classList.add('hidden');
+      if (viewRadar) viewRadar.classList.add('hidden');
 
       const btnArticles = document.getElementById('tab-btn-articles');
       const btnChatbot = document.getElementById('tab-btn-chatbot');
       const btnNewsletter = document.getElementById('tab-btn-newsletter');
+      const btnRadar = document.getElementById('tab-btn-radar');
 
       if (btnArticles) btnArticles.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition";
       if (btnChatbot) btnChatbot.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition";
       if (btnNewsletter) btnNewsletter.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition";
+      if (btnRadar) btnRadar.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition";
 
       if (tabName === 'articles') {
         if (viewArticles) viewArticles.classList.remove('hidden');
@@ -553,6 +603,9 @@
       } else if (tabName === 'newsletter') {
         if (viewNewsletter) viewNewsletter.classList.remove('hidden');
         if (btnNewsletter) btnNewsletter.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-cyan-300 bg-cyan-950/70 border border-cyan-800/40 transition";
+      } else if (tabName === 'radar') {
+        if (viewRadar) viewRadar.classList.remove('hidden');
+        if (btnRadar) btnRadar.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-emerald-300 bg-emerald-950/70 border border-emerald-800/40 transition";
       }
     }
 
@@ -693,6 +746,15 @@ ${escapeHtml(data.newsletter_markdown)}
       fetchArticles();
       fetchCategories();
       fetchStats();
+
+      // Check if URL contains ?radar=Entity permalink
+      const urlParams = new URLSearchParams(window.location.search);
+      const radarEntity = urlParams.get('radar');
+      if (radarEntity) {
+        prefillRadarSearch(radarEntity);
+        switchTab('radar');
+        submitRadarSearch();
+      }
 
       const searchInput = document.getElementById('searchInput');
       const clearBtn = document.getElementById('clearSearchBtn');
@@ -1311,6 +1373,160 @@ ${escapeHtml(data.newsletter_markdown)}
         fetchCategories();
       } catch (err) {
         console.error('Erreur enregistrement note:', err);
+      }
+    }
+
+    let currentRadarData = null;
+
+    function prefillRadarSearch(entity) {
+      const input = document.getElementById('radarInput');
+      if (input) {
+        input.value = entity;
+        input.focus();
+      }
+    }
+
+    function copyRadarShareLink(entity) {
+      const shareUrl = window.location.origin + window.location.pathname + '?radar=' + encodeURIComponent(entity);
+      navigator.clipboard.writeText(shareUrl);
+      alert('✓ Lien de partage copié dans le presse-papier :\n' + shareUrl);
+    }
+
+    async function submitRadarSearch(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('radarInput');
+      const entity = input.value.trim();
+      if (!entity) return;
+
+      const container = document.getElementById('radarResultsContainer');
+      const btn = document.getElementById('radarSubmitBtn');
+
+      container.classList.remove('hidden');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Analyse...`;
+
+      container.innerHTML = `
+        <div class="text-center py-12 glass rounded-2xl border border-slate-800 p-8 space-y-3">
+          <i class="fa-solid fa-chart-pie text-4xl text-emerald-400 animate-pulse mb-2"></i>
+          <h3 class="text-base font-bold text-white">Analyse du sentiment sur "${escapeHtml(entity)}" en cours...</h3>
+          <p class="text-xs text-slate-400">Gemini scanne vos articles sauvegardés et les actualités récentes du Web...</p>
+        </div>
+      `;
+
+      try {
+        const res = await fetch('/api/ai/sentiment', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ entity })
+        });
+        const data = await res.json();
+        currentRadarData = data;
+
+        const score = data.sentiment_score || 50;
+        const label = data.sentiment_label || 'Neutre / Mitigé';
+
+        container.innerHTML = `
+          <!-- Sentiment Gauge Card -->
+          <div class="glass p-6 rounded-2xl border border-slate-800 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block mb-1">Rapport d'Opinion</span>
+                <h2 class="text-xl font-extrabold text-white">${escapeHtml(data.entity)}</h2>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="copyRadarShareLink('${escapeHtml(data.entity)}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 flex items-center gap-1.5 transition">
+                  <i class="fa-solid fa-link text-cyan-400"></i> Copier le lien
+                </button>
+                <button onclick="saveRadarReportToWatch()" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold px-3.5 py-2 rounded-xl border border-emerald-600 shadow-lg shadow-emerald-700/30 flex items-center gap-1.5 transition">
+                  <i class="fa-solid fa-bookmark"></i> Enregistrer
+                </button>
+              </div>
+            </div>
+
+            <p class="text-xs text-slate-300 leading-relaxed">${escapeHtml(data.summary)}</p>
+
+            <!-- Visual Sentiment Bar -->
+            <div class="space-y-1.5 pt-2">
+              <div class="flex justify-between text-xs font-bold">
+                <span class="text-emerald-400">🟢 Opinions Positives : ${score}%</span>
+                <span class="text-rose-400">🔴 Opinions Négatives : ${100 - score}%</span>
+              </div>
+              <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden flex border border-slate-800">
+                <div class="bg-emerald-500 h-full transition-all duration-500" style="width: ${score}%"></div>
+                <div class="bg-rose-500 h-full transition-all duration-500" style="width: ${100 - score}%"></div>
+              </div>
+              <div class="text-center text-[11px] text-slate-400 font-semibold pt-1">
+                Tendance globale : <span class="text-emerald-300 font-bold">${escapeHtml(label)}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pros vs Cons 2-Column Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Pros Card -->
+            <div class="glass p-5 rounded-2xl border border-emerald-900/40 bg-emerald-950/20 space-y-3">
+              <h3 class="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                Points Forts & Avantages (Pros)
+              </h3>
+              <div class="space-y-2 text-xs">
+                ${(data.pros || []).map(p => formatBullets(p)).join('')}
+              </div>
+            </div>
+
+            <!-- Cons Card -->
+            <div class="glass p-5 rounded-2xl border border-rose-900/40 bg-rose-950/20 space-y-3">
+              <h3 class="text-xs font-bold text-rose-300 uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
+                Limites & Controverses (Cons)
+              </h3>
+              <div class="space-y-2 text-xs">
+                ${(data.cons || []).map(c => formatBullets(c)).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        container.innerHTML = `<div class="p-4 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-300 text-xs">Erreur lors de l'analyse de sentiment.</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Analyser</span> <i class="fa-solid fa-bolt text-[10px]"></i>`;
+      }
+    }
+
+    async function saveRadarReportToWatch() {
+      if (!currentRadarData) return;
+
+      try {
+        // 1. Save to dedicated sentiment_reports table
+        await fetch('/api/sentiment/reports', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(currentRadarData)
+        });
+
+        // 2. Save as Watch Entry in articles table for RAG Chatbot querying
+        const prosText = (currentRadarData.pros || []).join('\n');
+        const consText = (currentRadarData.cons || []).join('\n');
+        const articlePayload = {
+          title: `Rapport d'opinion : ${currentRadarData.entity} (${currentRadarData.sentiment_score}% Positif - ${currentRadarData.sentiment_label})`,
+          category: 'Tech & IA',
+          site_name: 'Radar & Sentiment',
+          summary: `🟢 ${currentRadarData.sentiment_score}% Positif | 🔴 ${100 - currentRadarData.sentiment_score}% Négatif\n\n${currentRadarData.summary}`,
+          content: `Rapport d'opinion sur ${currentRadarData.entity} :\n\nRésumé :\n${currentRadarData.summary}\n\nPoints Forts :\n${prosText}\n\nLimites :\n${consText}`,
+          notes: `Enregistré depuis le Radar d'Opinion SYNAPSE.`
+        };
+
+        await fetch('/api/articles', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(articlePayload)
+        });
+
+        alert('✓ Rapport d\'opinion enregistré dans votre veille !');
+        fetchArticles();
+      } catch (e) {
+        alert('Erreur lors de la sauvegarde du rapport.');
       }
     }
 

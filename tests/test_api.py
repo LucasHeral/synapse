@@ -51,3 +51,24 @@ def test_auto_detect_category():
         "Tech & IA",
         "Dev & Tech",
     ]
+
+
+def test_sentiment_report_save_and_get():
+    with TestClient(app) as client:
+        payload = {
+            "entity": "OpenAI",
+            "sentiment_score": 80,
+            "sentiment_label": "Très Positif",
+            "summary": "Excellente réputation sur la recherche IA.",
+            "pros": ["• **Innovation** : Modèles de pointe."],
+            "cons": ["• **Coût** : Tarification des APIs."],
+            "sources": [],
+        }
+        res_save = client.post("/api/sentiment/reports", json=payload)
+        assert res_save.status_code in [200, 201]
+
+        res_get = client.get("/api/sentiment/reports/OpenAI")
+        assert res_get.status_code == 200
+        data = res_get.json()
+        assert data["entity"] == "OpenAI"
+        assert data["sentiment_score"] == 80

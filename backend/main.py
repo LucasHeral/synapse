@@ -1,3 +1,4 @@
+import json
 import os
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -5,6 +6,7 @@ from urllib.parse import urlparse
 
 import requests
 from ai_service import (
+    analyze_sentiment_radar,
     answer_article_question,
     answer_rag_question,
     extract_full_text_from_url,
@@ -17,7 +19,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from models import ArticleCreate, ArticleUpdate, ExtractRequest
+from models import ArticleCreate, ArticleUpdate, ExtractRequest, SentimentReportCreate
 from pydantic import BaseModel
 
 
@@ -40,6 +42,10 @@ class NewsletterRequest(BaseModel):
 
 class EnrichRequest(BaseModel):
     model: Optional[str] = None
+
+
+class SentimentRequest(BaseModel):
+    entity: str
 
 
 @asynccontextmanager
@@ -379,6 +385,87 @@ def article_chat_endpoint(req: ArticleChatRequest):
 
     article = dict(row)
     res = answer_article_question(article, req.query, model=req.model, force_web_search=bool(req.force_web_search))
+    return res
+
+
+@app.post("/api/ai/sentiment")
+def sentiment_radar_endpoint(req: SentimentRequest):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM articles WHERE is_archived = 0 ORDER BY created_at DESC LIMIT 50")
+    articles = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    res = analyze_sentiment_radar(req.entity, articles)
+    return res
+
+
+@app.post("/api/sentiment/reports")
+def save_sentiment_report(req: SentimentReportCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    pros_json = json.dumps(req.pros or [], ensure_ascii=False)
+    cons_json = json.dumps(req.cons or [], ensure_ascii=False)
+    sources_json = json.dumps(req.sources or [], ensure_ascii=False)
+
+    cursor.execute("SELECT id FROM sentiment_reports WHERE LOWER(entity) = LOWER(?)", (req.entity.strip(),))
+    existing = cursor.fetchone()
+
+    if existing:
+        report_id = existing["id"]
+        cursor.execute(
+            """
+            UPDATE sentiment_reports
+            SET sentiment_score = ?, sentiment_label = ?, summary = ?, pros_json = ?, cons_json = ?, sources_json = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (req.sentiment_score, req.sentiment_label, req.summary, pros_json, cons_json, sources_json, report_id),
+        )
+    else:
+        cursor.execute(
+            """
+            INSERT INTO sentiment_reports (entity, sentiment_score, sentiment_label, summary, pros_json, cons_json, sources_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                req.entity.strip(),
+                req.sentiment_score,
+                req.sentiment_label,
+                req.summary,
+                pros_json,
+                cons_json,
+                sources_json,
+            ),
+        )
+        report_id = cursor.lastrowid
+
+    conn.commit()
+    cursor.execute("SELECT * FROM sentiment_reports WHERE id = ?", (report_id,))
+    row = dict(cursor.fetchone())
+    conn.close()
+
+    row["pros"] = json.loads(row.get("pros_json") or "[]")
+    row["cons"] = json.loads(row.get("cons_json") or "[]")
+    row["sources"] = json.loads(row.get("sources_json") or "[]")
+    return row
+
+
+@app.get("/api/sentiment/reports/{entity}")
+def get_sentiment_report(entity: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM sentiment_reports WHERE LOWER(entity) = LOWER(?)", (entity.strip(),))
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Rapport non trouvé")
+
+    res = dict(row)
+    res["pros"] = json.loads(res.get("pros_json") or "[]")
+    res["cons"] = json.loads(res.get("cons_json") or "[]")
+    res["sources"] = json.loads(res.get("sources_json") or "[]")
     return res
 
 

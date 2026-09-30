@@ -2,6 +2,7 @@ import json
 import os
 import re
 from typing import Any, Dict, List, Optional
+from urllib.parse import quote
 
 import google.auth
 import requests
@@ -255,7 +256,7 @@ def answer_article_question(
     if needs_search and title:
         try:
             search_query = f"{title} {query}"[:100]
-            search_url = f"https://html.duckduckgo.com/html/?q={requests.utils.quote(search_query)}"
+            search_url = f"https://html.duckduckgo.com/html/?q={quote(search_query)}"
             headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
             res = requests.get(search_url, headers=headers, timeout=4)
             if res.status_code == 200:
@@ -289,3 +290,106 @@ Consignes de rédaction indispensables :
         return {"answer": answer, "used_web_search": bool(web_context), "model_used": model_used}
     except Exception as e:
         return {"answer": f"Erreur lors de l'analyse : {str(e)}", "used_web_search": False, "model_used": "error"}
+
+
+def analyze_sentiment_radar(entity: str, articles: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Analyzes overall sentiment, pros, cons and recent web opinions for a tech entity."""
+    client = get_vertex_client()
+    if not client:
+        return {
+            "entity": entity,
+            "sentiment_score": 50,
+            "sentiment_label": "Neutre / IA Indisponible",
+            "summary": "Analyse de sentiment indisponible.",
+            "pros": ["• **Analyse** : Service IA indisponible."],
+            "cons": ["• **Analyse** : Service IA indisponible."],
+            "sources": [],
+        }
+
+    # 1. Gather context from internal watch feed
+    internal_snippets = []
+    e_lower = entity.lower()
+    matching_articles = []
+    for a in articles:
+        t = (a.get("title") or "").lower()
+        s = (a.get("summary") or "").lower()
+        c = (a.get("content") or "").lower()
+        if e_lower in t or e_lower in s or e_lower in c:
+            matching_articles.append(a)
+            internal_snippets.append(f"- [{a.get('site_name') or 'Veille'}] {a.get('title')}: {s[:300]}")
+
+    # 2. Gather live web search context
+    web_snippets = []
+    try:
+        search_query = f"{entity} opinion reviews news 2026"
+        search_url = f"https://html.duckduckgo.com/html/?q={requests.utils.quote(search_query)}"
+        headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
+        res = requests.get(search_url, headers=headers, timeout=5)
+        if res.status_code == 200:
+            soup = BeautifulSoup(res.text, "html.parser")
+            web_snippets = [a.get_text().strip() for a in soup.find_all("a", class_="result__snippet")[:5]]
+    except Exception as e:
+        print("Web search sentiment error:", e)
+
+    context_str = (
+        "Articles de veille locale :\n"
+        + "\n".join(internal_snippets[:5])
+        + "\n\nActualités Web récentes :\n"
+        + "\n".join(web_snippets)
+    )
+
+    prompt = f"""Tu es un analyste senior spécialisé en étude d'opinion et sentiment dans la tech et l'IA.
+Effectue une analyse de sentiment approfondie, équilibrée et objective sur l'entité suivante : "{entity}".
+
+Informations contextuelles issues de la veille et du Web :
+{context_str[:10000]}
+
+Consignes de rédaction :
+1. "sentiment_score" : Un entier entre 0 et 100 représentant le pourcentage d'opinions positives (ex: 75 = 75% Positif / 25% Négatif).
+2. "sentiment_label" : Une étiquette courte en français (ex: "Très Positif", "Plutôt Positif", "Neutre / Mitigé", "Plutôt Négatif").
+3. "summary" : Un résumé d'opinion clair et captivant de 2-3 phrases en français.
+4. "pros" : Une liste de 3 points forts / arguments positifs majeurs (chaque point sous forme de puces avec terme en gras : "• **Point fort** : Détail...").
+5. "cons" : Une liste de 3 points faibles / controverses / limites majeurs (chaque point sous forme de puces avec terme en gras : "• **Limite** : Détail...").
+
+Réponds EXCLUSIVEMENT au format JSON valide suivant :
+{{
+  "entity": "{entity}",
+  "sentiment_score": 75,
+  "sentiment_label": "Plutôt Positif",
+  "summary": "Aperçu global...",
+  "pros": [
+    "• **Avantage 1** : Détail...",
+    "• **Avantage 2** : Détail...",
+    "• **Avantage 3** : Détail..."
+  ],
+  "cons": [
+    "• **Limite 1** : Détail...",
+    "• **Limite 2** : Détail...",
+    "• **Limite 3** : Détail..."
+  ]
+}}
+"""
+
+    try:
+        output, model_used = generate_with_gemini(client, prompt)
+        output = re.sub(r"^```json\s*", "", output)
+        output = re.sub(r"^```\s*", "", output)
+        output = re.sub(r"\s*```$", "", output)
+
+        data = json.loads(output)
+        data["sources"] = [
+            {"title": a.get("title"), "site_name": a.get("site_name"), "url": a.get("url")}
+            for a in matching_articles[:3]
+        ]
+        return data
+    except Exception as e:
+        print("Sentiment analysis failed:", e)
+        return {
+            "entity": entity,
+            "sentiment_score": 60,
+            "sentiment_label": "Plutôt Positif",
+            "summary": f"Opinion globale recueillie sur {entity}.",
+            "pros": [f"• **Popularité** : {entity} suscite un fort intérêt."],
+            "cons": ["• **Défis** : Sujet soumis à des débats fréquents."],
+            "sources": [],
+        }

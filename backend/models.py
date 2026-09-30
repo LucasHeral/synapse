@@ -33,3 +33,13 @@ class ArticleUpdate(BaseModel):
 
 class ExtractRequest(BaseModel):
     url: str
+
+
+class SentimentReportCreate(BaseModel):
+    entity: str
+    sentiment_score: int
+    sentiment_label: str
+    summary: str
+    pros: Optional[List[str]] = []
+    cons: Optional[List[str]] = []
+    sources: Optional[List[dict]] = []
