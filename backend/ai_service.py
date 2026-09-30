@@ -235,8 +235,10 @@ Instructions :
         return {"answer": f"Erreur lors de l'analyse IA : {str(e)}", "sources": [], "model_used": "error"}
 
 
-def answer_article_question(article: Dict[str, Any], query: str, model: Optional[str] = None) -> Dict[str, Any]:
-    """Answers a question about a specific article using Vertex AI Gemini + Web Search if needed."""
+def answer_article_question(
+    article: Dict[str, Any], query: str, model: Optional[str] = None, force_web_search: bool = False
+) -> Dict[str, Any]:
+    """Answers a question about a specific article using Vertex AI Gemini + Web Search if needed or forced."""
     client = get_vertex_client()
     if not client:
         return {"answer": "Service IA indisponible.", "used_web_search": False, "model_used": "none"}
@@ -246,7 +248,7 @@ def answer_article_question(article: Dict[str, Any], query: str, model: Optional
     content = article.get("content") or article.get("summary") or ""
 
     web_context = ""
-    needs_search = any(
+    needs_search = force_web_search or any(
         k in query.lower()
         for k in ["recherche", "web", "dernière", "actuel", "comparer", "prix", "concurrents", "2026", "news", "site"]
     )

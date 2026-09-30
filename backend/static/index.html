@@ -106,23 +106,11 @@
       </div>
     </div>
 
-    <!-- Actions & Model Selector -->
+    <!-- Actions -->
     <div class="flex items-center space-x-3">
-      <!-- Model Selector Dropdown -->
-      <div class="flex items-center space-x-2 bg-slate-900/90 border border-purple-800/60 px-3 py-2 rounded-xl text-xs shrink-0 shadow-inner">
-        <i class="fa-solid fa-microchip text-purple-400"></i>
-        <span class="text-slate-400 font-medium hidden lg:inline">Modèle IA :</span>
-        <select id="modelSelect" onchange="onModelChange()" class="bg-transparent text-purple-300 font-bold outline-none cursor-pointer text-xs">
-          <option value="gemini-3.8-flash">Gemini 3.8 Flash</option>
-          <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-          <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-        </select>
-      </div>
-
       <button onclick="openAddModal()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center space-x-2 transition-all transform active:scale-95">
         <i class="fa-solid fa-plus"></i>
-        <span class="hidden sm:inline">Ajouter un lien</span>
+        <span>Ajouter un lien</span>
       </button>
       <button onclick="fetchArticles()" title="Actualiser" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition border border-slate-700">
         <i class="fa-solid fa-arrows-rotate text-sm"></i>
@@ -422,31 +410,42 @@
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-purple-300 flex items-center gap-1.5">
               <i class="fa-solid fa-comments text-purple-400"></i>
-              Discuter avec cet article (Q&A IA + Web Search)
+              Discuter avec cet article
             </span>
-            <span class="text-[10px] text-purple-400/80 font-mono model-name-label">Gemini 3.8 Flash</span>
           </div>
 
           <!-- Article Chat Thread -->
           <div id="articleChatThread" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
 
-          <!-- Quick Suggestions -->
+          <!-- Quick Suggestions (Pre-fills input field) -->
           <div class="flex flex-wrap gap-1.5 text-[11px]">
-            <button onclick="sendQuickArticleQuestion('Quels sont les chiffres et métriques clés de cet article ?')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">
-              💡 Chiffres clés ?
+            <button onclick="prefillArticleQuestion('Quels sont les chiffres et métriques clés de cet article ?')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 transition flex items-center gap-1">
+              💡 Chiffres clés
             </button>
-            <button onclick="sendQuickArticleQuestion('Effectue une recherche web sur les concurrents et cas d\'usage récents')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">
-              🌐 Recherche Web / Concurrents ?
+            <button onclick="prefillArticleQuestion('Quels sont les cas d\'usage concrets et l\'impact de cette technologie ?')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 transition flex items-center gap-1">
+              ⚡ Cas d'usage & Impact
+            </button>
+            <button onclick="prefillArticleQuestion('Quels sont les points forts et les limites soulevés ?')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 transition flex items-center gap-1">
+              🎯 Points forts & Limites
+            </button>
+            <button onclick="prefillArticleQuestion('Effectue une recherche web sur les concurrents et actus récentes de ce sujet')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 transition flex items-center gap-1">
+              🌐 Recherche Web / Concurrents
             </button>
           </div>
 
-          <!-- Question Input -->
-          <form onsubmit="submitArticleChat(event)" class="flex gap-2">
-            <input type="text" id="articleChatInput" placeholder="Posez une question sur cet article..." class="flex-1 bg-slate-950 text-xs text-slate-200 px-3 py-2 rounded-xl border border-slate-800 focus:outline-none focus:border-purple-500">
-            <button type="submit" id="articleChatSubmitBtn" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-1 shrink-0 transition">
-              <span>Poser</span>
-              <i class="fa-solid fa-paper-plane text-[10px]"></i>
-            </button>
+          <!-- Question Input & Web Search Toggle -->
+          <form onsubmit="submitArticleChat(event)" class="space-y-2">
+            <div class="flex items-center gap-2">
+              <input type="text" id="articleChatInput" placeholder="Posez une question sur cet article..." class="flex-1 bg-slate-950 text-xs text-slate-200 px-3 py-2 rounded-xl border border-slate-800 focus:outline-none focus:border-purple-500">
+              <button type="button" id="webSearchToggleBtn" onclick="toggleWebSearchForArticle()" class="text-xs font-semibold px-2.5 py-2 rounded-xl border transition flex items-center gap-1.5 shrink-0 bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200" title="Activer / Désactiver la recherche web">
+                <i class="fa-solid fa-globe"></i>
+                <span class="hidden sm:inline">Recherche Web</span>
+              </button>
+              <button type="submit" id="articleChatSubmitBtn" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shrink-0 transition">
+                <span>Poser</span>
+                <i class="fa-solid fa-paper-plane text-[10px]"></i>
+              </button>
+            </div>
           </form>
         </div>
       </div>
@@ -511,35 +510,6 @@
     let onlyFavorites = false;
     let articlesData = [];
     let activeReaderArticleId = null;
-
-    function getSelectedModel() {
-      const select = document.getElementById('modelSelect');
-      if (select && select.value) return select.value;
-      return localStorage.getItem('synapse_model') || 'gemini-3.8-flash';
-    }
-
-    function getSelectedModelName() {
-      const select = document.getElementById('modelSelect');
-      if (select && select.options && select.selectedIndex >= 0) {
-        return select.options[select.selectedIndex].text;
-      }
-      return 'Gemini 3.8 Flash';
-    }
-
-    function onModelChange() {
-      const select = document.getElementById('modelSelect');
-      if (select) {
-        localStorage.setItem('synapse_model', select.value);
-        updateModelLabels();
-      }
-    }
-
-    function updateModelLabels() {
-      const name = getSelectedModelName();
-      document.querySelectorAll('.model-name-label').forEach(el => {
-        el.innerText = name;
-      });
-    }
 
     function showAllArticles() {
       currentCategory = 'Tous';
@@ -660,7 +630,7 @@
       container.innerHTML = `
         <div class="text-center py-12">
           <i class="fa-solid fa-wand-magic-sparkles text-4xl text-cyan-400 animate-pulse mb-3"></i>
-          <h3 class="text-base font-bold text-white mb-1">Génération de la Newsletter par <span class="model-name-label">Gemini 3.8 Flash</span>...</h3>
+          <h3 class="text-base font-bold text-white mb-1">Génération de la Newsletter en cours...</h3>
           <p class="text-xs text-slate-400">Synthèse et structuration des posts de la semaine en cours...</p>
         </div>
       `;
@@ -716,13 +686,6 @@ ${escapeHtml(data.newsletter_markdown)}
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      const savedModel = localStorage.getItem('synapse_model');
-      const modelSelect = document.getElementById('modelSelect');
-      if (modelSelect && savedModel) {
-        modelSelect.value = savedModel;
-      }
-      updateModelLabels();
-
       fetchArticles();
       fetchCategories();
       fetchStats();
@@ -1021,7 +984,7 @@ ${escapeHtml(data.newsletter_markdown)}
               <div class="flex items-center justify-between p-3 rounded-xl bg-purple-950/40 border border-purple-800/40 text-xs">
                 <span class="font-bold text-purple-300 flex items-center gap-2">
                   <i class="fa-solid fa-brain text-purple-400"></i>
-                  Synthèse Structurée <span class="model-name-label">Gemini 3.8 Flash</span>
+                  Synthèse Structurée
                 </span>
                 <button onclick="triggerAiEnrichmentInModal(${currentReaderArticle.id})" id="modalAiGenBtn" class="text-purple-300 hover:text-white text-[11px] font-semibold bg-purple-900/60 hover:bg-purple-800/80 px-2.5 py-1 rounded-lg border border-purple-700/50 transition flex items-center gap-1.5">
                   <i class="fa-solid fa-arrows-rotate"></i> Régénérer
@@ -1038,7 +1001,7 @@ ${escapeHtml(data.newsletter_markdown)}
             <div class="text-center py-10 space-y-3 bg-slate-950/60 rounded-2xl border border-purple-900/40 p-6">
               <i class="fa-solid fa-wand-magic-sparkles text-4xl text-purple-400 animate-pulse mb-1"></i>
               <h4 class="text-sm font-bold text-white">Génération de la Synthèse IA en cours...</h4>
-              <p class="text-xs text-slate-400"><span class="model-name-label">Gemini 3.8 Flash</span> analyse le contenu complet et extrait les 3 à 5 enseignements clés...</p>
+              <p class="text-xs text-slate-400">L'IA analyse le contenu complet et extrait les 3 à 5 enseignements clés...</p>
             </div>
           `;
           triggerAiEnrichmentInModal(currentReaderArticle.id);
@@ -1087,6 +1050,28 @@ ${escapeHtml(data.newsletter_markdown)}
       return htmlLines.filter(Boolean).join('');
     }
 
+    let isWebSearchActive = false;
+
+    function toggleWebSearchForArticle() {
+      isWebSearchActive = !isWebSearchActive;
+      const btn = document.getElementById('webSearchToggleBtn');
+      if (btn) {
+        if (isWebSearchActive) {
+          btn.className = "text-xs font-semibold px-2.5 py-2 rounded-xl border transition flex items-center gap-1.5 shrink-0 bg-cyan-950 text-cyan-300 border-cyan-700/60 shadow-lg shadow-cyan-900/30";
+        } else {
+          btn.className = "text-xs font-semibold px-2.5 py-2 rounded-xl border transition flex items-center gap-1.5 shrink-0 bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200";
+        }
+      }
+    }
+
+    function prefillArticleQuestion(text) {
+      const input = document.getElementById('articleChatInput');
+      if (input) {
+        input.value = text;
+        input.focus();
+      }
+    }
+
     async function submitArticleChat(e) {
       if (e) e.preventDefault();
       const input = document.getElementById('articleChatInput');
@@ -1111,7 +1096,11 @@ ${escapeHtml(data.newsletter_markdown)}
         const res = await fetch('/api/ai/article-chat', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ article_id: currentReaderArticle.id, query, model: getSelectedModel() })
+          body: JSON.stringify({
+            article_id: currentReaderArticle.id,
+            query,
+            force_web_search: isWebSearchActive
+          })
         });
         const data = await res.json();
 

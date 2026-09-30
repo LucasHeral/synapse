@@ -30,6 +30,7 @@ class ArticleChatRequest(BaseModel):
     article_id: int
     query: str
     model: Optional[str] = None
+    force_web_search: Optional[bool] = False
 
 
 class NewsletterRequest(BaseModel):
@@ -370,7 +371,7 @@ def article_chat_endpoint(req: ArticleChatRequest):
         raise HTTPException(status_code=404, detail="Article introuvable")
 
     article = dict(row)
-    res = answer_article_question(article, req.query, model=req.model)
+    res = answer_article_question(article, req.query, model=req.model, force_web_search=bool(req.force_web_search))
     return res
 
 
