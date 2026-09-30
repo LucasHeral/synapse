@@ -35,3 +35,6 @@ jobs:
 
       - name: Run pre-commit hooks
         run: uv run pre-commit run --all-files
+
+      - name: Run unit tests
+        run: uv run pytest

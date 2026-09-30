@@ -36,7 +36,7 @@ format:
 
 # Run tests
 test:
-	$(VENV_BIN)/python test_google_genai.py
+	$(VENV_BIN)/pytest
 
 # Clean cache & virtualenv
 clean:

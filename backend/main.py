@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -33,7 +34,13 @@ class NewsletterRequest(BaseModel):
     days: Optional[int] = 7
 
 
-app = FastAPI(title="Synapse AI - Tech Watch & Knowledge Hub", version="1.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(title="SYNAPSE API", version="0.1.0", lifespan=lifespan)
 
 # Enable CORS for Chrome Extension & local development
 app.add_middleware(
@@ -43,11 +50,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-def startup_event():
-    init_db()
 
 
 def auto_detect_category(url: str, title: str = "", summary: str = "", site_name: str = "") -> str:
