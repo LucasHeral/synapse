@@ -120,9 +120,9 @@ function scanAndInjectButtons() {
 
   actionBars.forEach((bar) => {
     // Strict Exclusion: Ignore all comment boxes, replies, and comment trees
-    if (bar.closest('.comments-comment-item') || 
-        bar.closest('.comments-comments-list') || 
-        bar.closest('.comments-comment-box') || 
+    if (bar.closest('.comments-comment-item') ||
+        bar.closest('.comments-comments-list') ||
+        bar.closest('.comments-comment-box') ||
         bar.closest('.feed-shared-comment') ||
         bar.closest('.comments-comment-entity') ||
         bar.closest('[data-testid*="comment"]') ||
@@ -175,7 +175,7 @@ function scanAndInjectButtons() {
         } else {
           console.error("Save failed:", response ? response.error : "No response");
           btn.innerHTML = `<span style="font-size:12px;">❌</span>`;
-          setTimeout(() => { 
+          setTimeout(() => {
             btn.innerHTML = defaultIconHTML;
           }, 2000);
         }
@@ -201,7 +201,7 @@ function findPostCard(startEl) {
     }
     if (current.querySelector('[data-testid*="expandable-text"]') ||
         current.querySelector('p[componentkey]') ||
-        current.querySelector('.update-components-text') || 
+        current.querySelector('.update-components-text') ||
         current.querySelector('.feed-shared-update-v2__description') ||
         current.querySelector('.update-components-actor') ||
         current.querySelector('.feed-shared-actor')) {
@@ -397,9 +397,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // Extract Full Page Article Text Content
     let fullContent = "";
-    const targetEl = document.querySelector('article') || 
-                     document.querySelector('main') || 
-                     document.querySelector('[role="main"]') || 
+    const targetEl = document.querySelector('article') ||
+                     document.querySelector('main') ||
+                     document.querySelector('[role="main"]') ||
                      document.body;
 
     if (targetEl) {

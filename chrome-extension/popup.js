@@ -100,7 +100,7 @@ async function fetchExtractFromBackend(url, fallbackDomain) {
       } else {
         document.getElementById("siteName").value = fallbackDomain;
       }
-      
+
       const autoCat = detectCategory(url, data.title || "", data.summary || "", data.site_name || fallbackDomain);
       document.getElementById("category").value = autoCat;
     }
@@ -114,7 +114,7 @@ function detectCategory(url, title, summary, siteName) {
   }
 
   const text = `${title} ${summary} ${url} ${siteName}`.toLowerCase();
-  
+
   if (text.match(/\b(ai|ia|llm|gpt|claude|gemini|machine learning|deep learning|prompt|neural|vllm|sql engine|model)\b/)) {
     return "Tech & IA";
   }
