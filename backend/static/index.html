@@ -106,11 +106,23 @@
       </div>
     </div>
 
-    <!-- Actions -->
+    <!-- Actions & Model Selector -->
     <div class="flex items-center space-x-3">
+      <!-- Model Selector Dropdown -->
+      <div class="flex items-center space-x-2 bg-slate-900/90 border border-purple-800/60 px-3 py-2 rounded-xl text-xs shrink-0 shadow-inner">
+        <i class="fa-solid fa-microchip text-purple-400"></i>
+        <span class="text-slate-400 font-medium hidden lg:inline">Modèle IA :</span>
+        <select id="modelSelect" onchange="onModelChange()" class="bg-transparent text-purple-300 font-bold outline-none cursor-pointer text-xs">
+          <option value="gemini-3.8-flash">Gemini 3.8 Flash</option>
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+          <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+        </select>
+      </div>
+
       <button onclick="openAddModal()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center space-x-2 transition-all transform active:scale-95">
         <i class="fa-solid fa-plus"></i>
-        <span>Ajouter un lien</span>
+        <span class="hidden sm:inline">Ajouter un lien</span>
       </button>
       <button onclick="fetchArticles()" title="Actualiser" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition border border-slate-700">
         <i class="fa-solid fa-arrows-rotate text-sm"></i>
@@ -412,7 +424,7 @@
               <i class="fa-solid fa-comments text-purple-400"></i>
               Discuter avec cet article (Q&A IA + Web Search)
             </span>
-            <span class="text-[10px] text-slate-500 font-mono">Gemini 2.5</span>
+            <span class="text-[10px] text-purple-400/80 font-mono model-name-label">Gemini 3.8 Flash</span>
           </div>
 
           <!-- Article Chat Thread -->
@@ -500,6 +512,35 @@
     let articlesData = [];
     let activeReaderArticleId = null;
 
+    function getSelectedModel() {
+      const select = document.getElementById('modelSelect');
+      if (select && select.value) return select.value;
+      return localStorage.getItem('synapse_model') || 'gemini-3.8-flash';
+    }
+
+    function getSelectedModelName() {
+      const select = document.getElementById('modelSelect');
+      if (select && select.options && select.selectedIndex >= 0) {
+        return select.options[select.selectedIndex].text;
+      }
+      return 'Gemini 3.8 Flash';
+    }
+
+    function onModelChange() {
+      const select = document.getElementById('modelSelect');
+      if (select) {
+        localStorage.setItem('synapse_model', select.value);
+        updateModelLabels();
+      }
+    }
+
+    function updateModelLabels() {
+      const name = getSelectedModelName();
+      document.querySelectorAll('.model-name-label').forEach(el => {
+        el.innerText = name;
+      });
+    }
+
     function showAllArticles() {
       currentCategory = 'Tous';
       onlyFavorites = false;
@@ -568,7 +609,7 @@
         const res = await fetch('/api/ai/chat', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ query })
+          body: JSON.stringify({ query, model: getSelectedModel() })
         });
         const data = await res.json();
 
@@ -619,13 +660,17 @@
       container.innerHTML = `
         <div class="text-center py-12">
           <i class="fa-solid fa-wand-magic-sparkles text-4xl text-cyan-400 animate-pulse mb-3"></i>
-          <h3 class="text-base font-bold text-white mb-1">Génération de la Newsletter par Gemini 2.5...</h3>
+          <h3 class="text-base font-bold text-white mb-1">Génération de la Newsletter par <span class="model-name-label">Gemini 3.8 Flash</span>...</h3>
           <p class="text-xs text-slate-400">Synthèse et structuration des posts de la semaine en cours...</p>
         </div>
       `;
 
       try {
-        const res = await fetch('/api/ai/newsletter', { method: 'POST' });
+        const res = await fetch('/api/ai/newsletter', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ model: getSelectedModel() })
+        });
         const data = await res.json();
 
         container.innerHTML = `
@@ -657,7 +702,11 @@ ${escapeHtml(data.newsletter_markdown)}
       if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin text-[10px]"></i> IA...`;
 
       try {
-        const res = await fetch(`/api/ai/enrich/${id}`, { method: 'POST' });
+        const res = await fetch(`/api/ai/enrich/${id}`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ model: getSelectedModel() })
+        });
         if (res.ok) {
           await fetchArticles();
         }
@@ -667,6 +716,13 @@ ${escapeHtml(data.newsletter_markdown)}
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      const savedModel = localStorage.getItem('synapse_model');
+      const modelSelect = document.getElementById('modelSelect');
+      if (modelSelect && savedModel) {
+        modelSelect.value = savedModel;
+      }
+      updateModelLabels();
+
       fetchArticles();
       fetchCategories();
       fetchStats();
@@ -965,7 +1021,7 @@ ${escapeHtml(data.newsletter_markdown)}
               <div class="flex items-center justify-between p-3 rounded-xl bg-purple-950/40 border border-purple-800/40 text-xs">
                 <span class="font-bold text-purple-300 flex items-center gap-2">
                   <i class="fa-solid fa-brain text-purple-400"></i>
-                  Synthèse Structurée Gemini 2.5
+                  Synthèse Structurée <span class="model-name-label">Gemini 3.8 Flash</span>
                 </span>
                 <button onclick="triggerAiEnrichmentInModal(${currentReaderArticle.id})" id="modalAiGenBtn" class="text-purple-300 hover:text-white text-[11px] font-semibold bg-purple-900/60 hover:bg-purple-800/80 px-2.5 py-1 rounded-lg border border-purple-700/50 transition flex items-center gap-1.5">
                   <i class="fa-solid fa-arrows-rotate"></i> Régénérer
@@ -982,7 +1038,7 @@ ${escapeHtml(data.newsletter_markdown)}
             <div class="text-center py-10 space-y-3 bg-slate-950/60 rounded-2xl border border-purple-900/40 p-6">
               <i class="fa-solid fa-wand-magic-sparkles text-4xl text-purple-400 animate-pulse mb-1"></i>
               <h4 class="text-sm font-bold text-white">Génération de la Synthèse IA en cours...</h4>
-              <p class="text-xs text-slate-400">Gemini 2.5 analyse le contenu complet et extrait les 3 à 5 enseignements clés...</p>
+              <p class="text-xs text-slate-400"><span class="model-name-label">Gemini 3.8 Flash</span> analyse le contenu complet et extrait les 3 à 5 enseignements clés...</p>
             </div>
           `;
           triggerAiEnrichmentInModal(currentReaderArticle.id);
@@ -1055,7 +1111,7 @@ ${escapeHtml(data.newsletter_markdown)}
         const res = await fetch('/api/ai/article-chat', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ article_id: currentReaderArticle.id, query })
+          body: JSON.stringify({ article_id: currentReaderArticle.id, query, model: getSelectedModel() })
         });
         const data = await res.json();
 
@@ -1088,10 +1144,14 @@ ${escapeHtml(data.newsletter_markdown)}
 
     async function triggerAiEnrichmentInModal(id) {
       const btn = document.getElementById('modalAiGenBtn');
-      if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Génération Gemini...`;
+      if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Génération...`;
 
       try {
-        const res = await fetch('/api/ai/enrich/' + id, { method: 'POST' });
+        const res = await fetch('/api/ai/enrich/' + id, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ model: getSelectedModel() })
+        });
         if (res.ok) {
           const updatedArt = await res.json();
           currentReaderArticle = updatedArt;

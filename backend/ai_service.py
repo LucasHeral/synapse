@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import google.auth
 import requests
@@ -9,7 +9,7 @@ import trafilatura
 from bs4 import BeautifulSoup
 from google import genai
 
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 _vertex_client = None
 
 
@@ -25,6 +25,31 @@ def get_vertex_client():
     except Exception as e:
         print("Error initializing Vertex AI Client:", e)
         return None
+
+
+def generate_with_gemini(client, prompt: str, requested_model: Optional[str] = None):
+    """Generates content using requested model with fallback to available Gemini Flash models."""
+    models_to_try = [
+        m for m in [requested_model, GEMINI_MODEL, "gemini-3.8-flash", "gemini-2.5-flash", "gemini-1.5-flash"] if m
+    ]
+
+    seen = set()
+    unique_models = []
+    for m in models_to_try:
+        if m not in seen:
+            seen.add(m)
+            unique_models.append(m)
+
+    last_error = None
+    for model_name in unique_models:
+        try:
+            res = client.models.generate_content(model=model_name, contents=prompt)
+            return res.text.strip(), model_name
+        except Exception as e:
+            last_error = e
+            print(f"Model {model_name} failed, trying fallback...", e)
+
+    raise last_error or Exception("All Gemini models failed.")
 
 
 def extract_full_text_from_url(url: str) -> str:
@@ -63,11 +88,13 @@ def extract_full_text_from_url(url: str) -> str:
     return ""
 
 
-def generate_ai_summary_and_tags(text: str, title: str = "", author: str = "") -> Dict[str, Any]:
+def generate_ai_summary_and_tags(
+    text: str, title: str = "", author: str = "", model: Optional[str] = None
+) -> Dict[str, Any]:
     """Generates structured AI summary and tags using Vertex AI Gemini."""
     client = get_vertex_client()
     if not client:
-        return {"summary": text[:400], "tags": ["IA", "Tech"]}
+        return {"summary": text[:400], "tags": ["IA", "Tech"], "model_used": "fallback"}
 
     prompt = f"""Tu es un expert senior en veille technologique et IA.
 Analyse cet article/post et génère une synthèse structurée à fort impact.
@@ -90,21 +117,24 @@ Réponds EXCLUSIVEMENT au format JSON valide suivant :
 """
 
     try:
-        response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-        output = response.text.strip()
+        output, model_used = generate_with_gemini(client, prompt, model)
         # Clean markdown backticks if returned
         output = re.sub(r"^```json\s*", "", output)
         output = re.sub(r"^```\s*", "", output)
         output = re.sub(r"\s*```$", "", output)
 
         data = json.loads(output)
-        return {"summary": data.get("summary", text[:400]), "tags": data.get("tags", ["IA", "Tech"])}
+        return {
+            "summary": data.get("summary", text[:400]),
+            "tags": data.get("tags", ["IA", "Tech"]),
+            "model_used": model_used,
+        }
     except Exception as e:
         print("AI Summary generation failed:", e)
-        return {"summary": text[:400], "tags": ["Tech"]}
+        return {"summary": text[:400], "tags": ["Tech"], "model_used": "fallback"}
 
 
-def generate_weekly_newsletter(articles: List[Dict[str, Any]]) -> str:
+def generate_weekly_newsletter(articles: List[Dict[str, Any]], model: Optional[str] = None) -> str:
     """Generates a weekly curated AI newsletter / digest from a list of articles."""
     client = get_vertex_client()
     if not articles:
@@ -138,19 +168,20 @@ Rédige dans un style fluide, professionnel et engageant. N'invente pas de faux 
 """
 
     try:
-        response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-        return response.text.strip()
+        text_res, _ = generate_with_gemini(client, prompt, model)
+        return text_res
     except Exception as e:
         return f"# 📰 Newsletter Veille Technologique\n\nErreur lors de la génération IA: {str(e)}"
 
 
-def answer_rag_question(query: str, articles: List[Dict[str, Any]]) -> Dict[str, Any]:
+def answer_rag_question(query: str, articles: List[Dict[str, Any]], model: Optional[str] = None) -> Dict[str, Any]:
     """Answers user queries across the whole knowledge base using Vertex AI Gemini with cited sources."""
     client = get_vertex_client()
     if not articles:
         return {
             "answer": "Votre base de veille est actuellement vide. Ajoutez des articles pour pouvoir poser des questions !",
             "sources": [],
+            "model_used": "none",
         }
 
     # Prepare knowledge base context
@@ -185,8 +216,7 @@ Instructions :
 """
 
     try:
-        response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-        answer = response.text.strip()
+        answer, model_used = generate_with_gemini(client, prompt, model)
 
         # Identify relevant sources
         sources = []
@@ -200,20 +230,19 @@ Instructions :
                     {"id": a.get("id"), "title": a.get("title"), "author": a.get("author"), "url": a.get("url")}
                 )
 
-        return {"answer": answer, "sources": sources[:5]}
+        return {"answer": answer, "sources": sources[:5], "model_used": model_used}
     except Exception as e:
-        return {"answer": f"Erreur lors de l'analyse IA : {str(e)}", "sources": []}
+        return {"answer": f"Erreur lors de l'analyse IA : {str(e)}", "sources": [], "model_used": "error"}
 
 
-def answer_article_question(article: Dict[str, Any], query: str) -> Dict[str, Any]:
+def answer_article_question(article: Dict[str, Any], query: str, model: Optional[str] = None) -> Dict[str, Any]:
     """Answers a question about a specific article using Vertex AI Gemini + Web Search if needed."""
     client = get_vertex_client()
     if not client:
-        return {"answer": "Service IA indisponible.", "used_web_search": False}
+        return {"answer": "Service IA indisponible.", "used_web_search": False, "model_used": "none"}
 
     title = article.get("title", "")
     author = article.get("author", "")
-    article.get("url", "")
     content = article.get("content") or article.get("summary") or ""
 
     web_context = ""
@@ -254,7 +283,7 @@ Consignes de rédaction indispensables :
 """
 
     try:
-        response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-        return {"answer": response.text.strip(), "used_web_search": bool(web_context)}
+        answer, model_used = generate_with_gemini(client, prompt, model)
+        return {"answer": answer, "used_web_search": bool(web_context), "model_used": model_used}
     except Exception as e:
-        return {"answer": f"Erreur lors de l'analyse : {str(e)}", "used_web_search": False}
+        return {"answer": f"Erreur lors de l'analyse : {str(e)}", "used_web_search": False, "model_used": "error"}

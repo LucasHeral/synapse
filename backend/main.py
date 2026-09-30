@@ -23,15 +23,22 @@ from pydantic import BaseModel
 
 class ChatRequest(BaseModel):
     query: str
+    model: Optional[str] = None
 
 
 class ArticleChatRequest(BaseModel):
     article_id: int
     query: str
+    model: Optional[str] = None
 
 
 class NewsletterRequest(BaseModel):
     days: Optional[int] = 7
+    model: Optional[str] = None
+
+
+class EnrichRequest(BaseModel):
+    model: Optional[str] = None
 
 
 @asynccontextmanager
@@ -264,7 +271,7 @@ def create_article(article: ArticleCreate):
 
 
 @app.post("/api/ai/enrich/{article_id}")
-def ai_enrich_article(article_id: int):
+def ai_enrich_article(article_id: int, req: Optional[EnrichRequest] = None):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM articles WHERE id = ?", (article_id,))
@@ -279,6 +286,7 @@ def ai_enrich_article(article_id: int):
     summary = article.get("summary") or ""
     title = article.get("title") or ""
     author = article.get("author") or ""
+    req_model = req.model if req else None
 
     if url and url.startswith("http") and len(content.strip()) < 100:
         extracted_text = extract_full_text_from_url(url)
@@ -289,7 +297,7 @@ def ai_enrich_article(article_id: int):
     if not text_for_ai:
         text_for_ai = title
 
-    ai_res = generate_ai_summary_and_tags(text_for_ai, title=title, author=author)
+    ai_res = generate_ai_summary_and_tags(text_for_ai, title=title, author=author, model=req_model)
 
     new_summary = ai_res.get("summary", summary)
     tags_list = ai_res.get("tags", [])
@@ -314,6 +322,7 @@ def ai_enrich_article(article_id: int):
 @app.post("/api/ai/newsletter")
 def generate_newsletter_endpoint(req: Optional[NewsletterRequest] = None):
     days = req.days if req else 7
+    req_model = req.model if req else None
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -333,7 +342,7 @@ def generate_newsletter_endpoint(req: Optional[NewsletterRequest] = None):
 
     conn.close()
 
-    markdown_res = generate_weekly_newsletter(rows)
+    markdown_res = generate_weekly_newsletter(rows, model=req_model)
     return {"newsletter_markdown": markdown_res, "articles_count": len(rows)}
 
 
@@ -345,7 +354,7 @@ def chat_kb_endpoint(req: ChatRequest):
     articles = [dict(r) for r in cursor.fetchall()]
     conn.close()
 
-    res = answer_rag_question(req.query, articles)
+    res = answer_rag_question(req.query, articles, model=req.model)
     return res
 
 
@@ -361,7 +370,7 @@ def article_chat_endpoint(req: ArticleChatRequest):
         raise HTTPException(status_code=404, detail="Article introuvable")
 
     article = dict(row)
-    res = answer_article_question(article, req.query)
+    res = answer_article_question(article, req.query, model=req.model)
     return res
 
 
