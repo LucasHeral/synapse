@@ -80,6 +80,6 @@ make precommit
 | `chrome-extension/content.js` | Content script for page scraping & LinkedIn button injection. |
 | `chrome-extension/popup.js` | Extension popup form, domain extraction, category auto-fill. |
 | `chrome-extension/manifest.json` | Extension Manifest V3 configuration & permissions. |
-| `docs/solutions/` | Engineering learnings capitalised via `ce-compound`. |
+| `solutions/` | Engineering learnings capitalised via `ce-compound`. |
 | `CONCEPTS.md` | Domain vocabulary and concept definitions. |
 | `tests/test_api.py` | `pytest` test suite for API endpoints. |
