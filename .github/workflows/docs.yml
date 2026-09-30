@@ -30,6 +30,10 @@ jobs:
       - name: Install dependencies with uv
         run: uv sync
 
+      - name: Generate OpenAPI Spec JSON
+        run: |
+          uv run python -c "import json, sys; from pathlib import Path; sys.path.insert(0, str(Path.cwd() / 'backend')); from main import app; json.dump(app.openapi(), open('docs/openapi.json', 'w'), indent=2)"
+
       - name: Deploy MkDocs to GitHub Pages
         run: |
           git config user.name "github-actions[bot]"

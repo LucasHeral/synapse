@@ -52,6 +52,7 @@ nav:
   - 🏠 Accueil: index.md
   - 🧩 Extension Chrome: chrome-extension.md
   - 🖥️ Dashboard & IA: dashboard.md
-  - 📐 Architecture & API: architecture.md
+  - 📐 Architecture: architecture.md
+  - 📄 API Reference (Swagger): api-reference.md
   - 🧠 Apprentissages Techniques:
       - Collisions Message Listeners MV3: solutions/integration-issues/chrome-extension-mv3-content-script-listener-collisions.md
