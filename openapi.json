@@ -411,6 +411,20 @@
       }
     },
     "/api/sentiment/reports": {
+      "get": {
+        "summary": "List Sentiment Reports",
+        "operationId": "list_sentiment_reports_api_sentiment_reports_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
       "post": {
         "summary": "Save Sentiment Report",
         "operationId": "save_sentiment_report_api_sentiment_reports_post",
@@ -458,6 +472,43 @@
             "schema": {
               "type": "string",
               "title": "Entity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sentiment/reports/{report_id}": {
+      "delete": {
+        "summary": "Delete Sentiment Report",
+        "operationId": "delete_sentiment_report_api_sentiment_reports__report_id__delete",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Report Id"
             }
           }
         ],
@@ -1080,9 +1131,7 @@
           "pros": {
             "anyOf": [
               {
-                "items": {
-                  "type": "string"
-                },
+                "items": {},
                 "type": "array"
               },
               {
@@ -1095,9 +1144,7 @@
           "cons": {
             "anyOf": [
               {
-                "items": {
-                  "type": "string"
-                },
+                "items": {},
                 "type": "array"
               },
               {
