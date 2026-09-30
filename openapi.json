@@ -374,6 +374,115 @@
         }
       }
     },
+    "/api/ai/sentiment": {
+      "post": {
+        "summary": "Sentiment Radar Endpoint",
+        "operationId": "sentiment_radar_endpoint_api_ai_sentiment_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SentimentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sentiment/reports": {
+      "post": {
+        "summary": "Save Sentiment Report",
+        "operationId": "save_sentiment_report_api_sentiment_reports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SentimentReportCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sentiment/reports/{entity}": {
+      "get": {
+        "summary": "Get Sentiment Report",
+        "operationId": "get_sentiment_report_api_sentiment_reports__entity__get",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/categories": {
       "get": {
         "summary": "Get Categories",
@@ -949,6 +1058,93 @@
         },
         "type": "object",
         "title": "NewsletterRequest"
+      },
+      "SentimentReportCreate": {
+        "properties": {
+          "entity": {
+            "type": "string",
+            "title": "Entity"
+          },
+          "sentiment_score": {
+            "type": "integer",
+            "title": "Sentiment Score"
+          },
+          "sentiment_label": {
+            "type": "string",
+            "title": "Sentiment Label"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "pros": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pros",
+            "default": []
+          },
+          "cons": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cons",
+            "default": []
+          },
+          "sources": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sources",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "entity",
+          "sentiment_score",
+          "sentiment_label",
+          "summary"
+        ],
+        "title": "SentimentReportCreate"
+      },
+      "SentimentRequest": {
+        "properties": {
+          "entity": {
+            "type": "string",
+            "title": "Entity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entity"
+        ],
+        "title": "SentimentRequest"
       },
       "ValidationError": {
         "properties": {
