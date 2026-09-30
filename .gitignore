@@ -10,3 +10,4 @@ __pycache__/
 backend/synapse_veille.db
 test_syntax.js
 find_invalid_token.js
+site/

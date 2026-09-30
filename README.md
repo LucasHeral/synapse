@@ -4,6 +4,16 @@
 
 ---
 
+## 📸 Aperçu Visuel
+
+### Dashboard Web (`http://localhost:8000`)
+![SYNAPSE Dashboard](docs/assets/dashboard-overview.png)
+
+### Extension Chrome (Manifest V3)
+![Extension Chrome SYNAPSE](docs/assets/chrome-extension-popup.png)
+
+---
+
 ## 🚀 Fonctionnalités Clés
 
 - **Extension Chrome (Manifest V3)** :
@@ -16,6 +26,17 @@
   - **💬 Chatbot d'Article** : Chat interactif en bas de la modale de chaque article avec support de la **recherche Web**.
   - **🤖 Chatbot Général** : Assistant IA interrogeant l'ensemble de votre base de connaissances.
   - **📰 Newsletter Hebdo** : Génération en 1 clic d'un digest structuré par thématique en Markdown.
+
+---
+
+## 📖 Documentation MkDocs
+
+La documentation complète du projet est disponible en ligne sur **[LucasHeral.github.io/synapse](https://LucasHeral.github.io/synapse/)**.
+
+Pour servir la documentation localement :
+```bash
+make docs-serve
+```
 
 ---
 

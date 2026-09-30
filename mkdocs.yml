@@ -1,0 +1,57 @@
+site_name: SYNAPSE - Hub de Veille Technologique & IA
+site_description: Documentation officielle de SYNAPSE (FastAPI, Chrome Extension MV3, Google Vertex AI Gemini)
+site_author: Lucas Heral
+site_url: https://LucasHeral.github.io/synapse/
+
+repo_name: LucasHeral/synapse
+repo_url: https://github.com/LucasHeral/synapse
+
+theme:
+  name: material
+  language: fr
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: purple
+      toggle:
+        icon: material/brightness-4
+        name: Mode clair
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: purple
+      toggle:
+        icon: material/brightness-7
+        name: Mode sombre
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - attr_list
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - 🏠 Accueil: index.md
+  - 🧩 Extension Chrome: chrome-extension.md
+  - 🖥️ Dashboard & IA: dashboard.md
+  - 📐 Architecture & API: architecture.md
+  - 🧠 Apprentissages Techniques:
+      - Collisions Message Listeners MV3: solutions/integration-issues/chrome-extension-mv3-content-script-listener-collisions.md

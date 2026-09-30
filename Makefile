@@ -1,4 +1,4 @@
-.PHONY: install sync dev run test lint format precommit clean
+.PHONY: install sync dev run test lint format precommit docs-build docs-serve docs-deploy clean
 
 UV = /Users/lucas.heral/.local/bin/uv
 VENV_BIN = $(CURDIR)/.venv/bin
@@ -38,6 +38,18 @@ format:
 test:
 	$(VENV_BIN)/pytest
 
+# Build MkDocs documentation
+docs-build:
+	$(VENV_BIN)/mkdocs build
+
+# Serve MkDocs documentation locally
+docs-serve:
+	$(VENV_BIN)/mkdocs serve
+
+# Deploy MkDocs documentation to GitHub Pages
+docs-deploy:
+	$(VENV_BIN)/mkdocs gh-deploy --force
+
 # Clean cache & virtualenv
 clean:
-	rm -rf .venv __pycache__ backend/__pycache__ .pytest_cache .ruff_cache
+	rm -rf .venv __pycache__ backend/__pycache__ .pytest_cache .ruff_cache site
