@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SYNAPSE - Hub de Veille Technologique</title>
+  <title>SYNAPSE</title>
   <link rel="icon" type="image/png" href="/static/favicon.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -94,8 +94,8 @@
     <div class="flex-1 max-w-xl mx-8">
       <div class="relative">
         <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-        <input 
-          type="text" 
+        <input
+          type="text"
           id="searchInput"
           placeholder="Rechercher dans la veille (titre, auteur, contenu, notes...)..."
           class="w-full bg-slate-900/80 text-sm text-slate-100 placeholder-slate-500 pl-10 pr-10 py-2 rounded-xl border border-slate-700/60 focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
@@ -124,7 +124,7 @@
     <!-- Left Sidebar -->
     <aside class="w-64 glass-sidebar p-4 flex flex-col justify-between shrink-0 overflow-y-auto">
       <div class="space-y-6">
-        
+
         <!-- Stats Summary -->
         <div class="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80">
           <div class="text-center p-2 rounded-lg bg-slate-800/40">
@@ -186,7 +186,7 @@
 
     <!-- Main Workspace -->
     <main class="flex-1 flex flex-col overflow-hidden bg-slate-950/50">
-      
+
       <!-- View 1: Flux de Veille (Articles Grid) -->
       <div id="viewArticles" class="flex-1 flex flex-col overflow-hidden">
         <div class="h-12 px-6 flex items-center justify-between border-b border-slate-800/80 bg-slate-900/30 shrink-0">
@@ -239,8 +239,8 @@
 
           <!-- Chat Input Bar -->
           <form onsubmit="submitChatQuery(event)" class="relative flex gap-2">
-            <input 
-              type="text" 
+            <input
+              type="text"
               id="chatInput"
               required
               placeholder="Posez une question sur l'ensemble de votre veille..."
@@ -399,7 +399,7 @@
       <!-- Article Body Content -->
       <div class="flex-1 overflow-y-auto pr-2 space-y-4">
         <div id="readerBody" class="text-slate-200 text-xs md:text-sm leading-relaxed font-normal selection:bg-indigo-500 selection:text-white"></div>
-        
+
         <div id="readerNotesContainer" class="hidden mt-4 p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-indigo-200">
           <span class="font-bold text-indigo-400 uppercase tracking-wider block mb-1">Notes personnelles</span>
           <p id="readerNotes" class="italic text-slate-300 text-xs"></p>
@@ -673,7 +673,7 @@ ${escapeHtml(data.newsletter_markdown)}
 
       const searchInput = document.getElementById('searchInput');
       const clearBtn = document.getElementById('clearSearchBtn');
-      
+
       let searchTimeout;
       searchInput.addEventListener('input', (e) => {
         const val = e.target.value;
@@ -709,7 +709,7 @@ ${escapeHtml(data.newsletter_markdown)}
       try {
         const res = await fetch('/api/categories');
         const categories = await res.json();
-        
+
         const container = document.getElementById('categoriesList');
         if (!categories || categories.length === 0) {
           container.innerHTML = `<div class="text-xs text-slate-500 px-3 py-1">Aucune catégorie</div>`;
@@ -720,8 +720,8 @@ ${escapeHtml(data.newsletter_markdown)}
           const isActive = currentCategory === cat.category;
           return `
             <button onclick="filterCategory('${cat.category}')" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition ${
-              isActive 
-                ? 'bg-indigo-950/70 text-indigo-300 border border-indigo-800/40' 
+              isActive
+                ? 'bg-indigo-950/70 text-indigo-300 border border-indigo-800/40'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
             }">
               <span class="truncate flex items-center gap-2">
@@ -948,8 +948,8 @@ ${escapeHtml(data.newsletter_markdown)}
         btnFull.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition bg-indigo-950 text-indigo-300 border border-indigo-800/40";
         btnSummary.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition text-slate-400 hover:text-white";
 
-        const fullText = (currentReaderArticle.content && currentReaderArticle.content.trim().length > 30) 
-          ? currentReaderArticle.content 
+        const fullText = (currentReaderArticle.content && currentReaderArticle.content.trim().length > 30)
+          ? currentReaderArticle.content
           : (currentReaderArticle.summary || 'Aucun contenu texte disponible.');
         bodyEl.innerText = fullText;
       } else {
@@ -1059,8 +1059,8 @@ ${escapeHtml(data.newsletter_markdown)}
         });
         const data = await res.json();
 
-        const webBadge = data.used_web_search 
-          ? `<span class="inline-flex items-center gap-1 text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800/40 px-1.5 py-0.5 rounded ml-2">🌐 Recherche Web</span>` 
+        const webBadge = data.used_web_search
+          ? `<span class="inline-flex items-center gap-1 text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800/40 px-1.5 py-0.5 rounded ml-2">🌐 Recherche Web</span>`
           : '';
 
         thread.innerHTML += `
@@ -1114,7 +1114,7 @@ ${escapeHtml(data.newsletter_markdown)}
 
       const targetFav = art.is_favorite !== 1;
       await toggleFavorite(activeReaderArticleId, targetFav);
-      
+
       const favBtnText = document.getElementById('readerFavText');
       favBtnText.innerText = targetFav ? 'Favori ★' : 'Ajouter aux favoris';
     }
@@ -1185,7 +1185,7 @@ ${escapeHtml(data.newsletter_markdown)}
           body: JSON.stringify({ url })
         });
         const data = await res.json();
-        
+
         if (data.title) document.getElementById('addTitle').value = data.title;
         if (data.summary) document.getElementById('addSummary').value = data.summary;
         if (data.site_name) document.getElementById('addSiteName').value = data.site_name;
