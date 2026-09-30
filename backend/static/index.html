@@ -299,16 +299,21 @@
           </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full space-y-6">
+        <div class="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto w-full space-y-6">
           <!-- Search Bar & Suggestions -->
           <div class="glass p-5 rounded-2xl border border-slate-800 space-y-4">
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <i class="fa-solid fa-magnifying-glass-chart text-emerald-400"></i>
-              Sonder l'opinion sur une entité (Entreprise, Modèle, CEO, Techno)
-            </h3>
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-magnifying-glass-chart text-emerald-400"></i>
+                Sonder l'opinion sur une entité (Entreprise, Modèle, CEO, Techno)
+              </h3>
+              <span class="text-[10px] bg-emerald-950/60 text-emerald-300 border border-emerald-800/60 px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1">
+                <i class="fa-solid fa-bolt text-[9px]"></i> Deep Research Multi-Axes
+              </span>
+            </div>
 
             <form onsubmit="submitRadarSearch(event)" class="flex gap-2">
-              <input type="text" id="radarInput" placeholder="ex: OpenAI, Sam Altman, DeepSeek, vLLM, Claude 3.7, Rust..." class="flex-1 bg-slate-950 text-xs text-slate-100 px-4 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-emerald-500">
+              <input type="text" id="radarInput" placeholder="ex: Mistral AI, Sam Altman, DeepSeek, vLLM, Claude 3.7, Rust, Polars..." class="flex-1 bg-slate-950 text-xs text-slate-100 px-4 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-emerald-500">
               <button type="submit" id="radarSubmitBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center gap-1.5">
                 <span>Analyser</span>
                 <i class="fa-solid fa-bolt text-[10px]"></i>
@@ -318,6 +323,7 @@
             <!-- Suggestion Badges -->
             <div class="flex flex-wrap items-center gap-2 text-xs pt-1">
               <span class="text-slate-500 text-[11px] font-medium">Suggestions :</span>
+              <button onclick="prefillRadarSearch('Mistral AI')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">Mistral AI</button>
               <button onclick="prefillRadarSearch('OpenAI')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">OpenAI</button>
               <button onclick="prefillRadarSearch('Sam Altman')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">Sam Altman</button>
               <button onclick="prefillRadarSearch('DeepSeek')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">DeepSeek</button>
@@ -328,6 +334,22 @@
 
           <!-- Radar Results Output Container -->
           <div id="radarResultsContainer" class="hidden space-y-5"></div>
+
+          <!-- Saved Reports History Section (Dedicated within Radar Tab) -->
+          <div class="glass p-5 rounded-2xl border border-slate-800 space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-box-archive text-emerald-400"></i>
+                Historique des Rapports d'Opinion Sauvegardés
+              </h3>
+              <span id="radarHistoryCount" class="text-[11px] text-slate-500">0 rapport sauvegardé</span>
+            </div>
+            <div id="radarHistoryContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div class="text-center py-6 col-span-full text-xs text-slate-500">
+                Aucun rapport d'opinion sauvegardé pour l'instant. Cliquez sur "Enregistrer" après une analyse.
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -606,6 +628,7 @@
       } else if (tabName === 'radar') {
         if (viewRadar) viewRadar.classList.remove('hidden');
         if (btnRadar) btnRadar.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-emerald-300 bg-emerald-950/70 border border-emerald-800/40 transition";
+        loadRadarHistory();
       }
     }
 
@@ -1392,6 +1415,106 @@ ${escapeHtml(data.newsletter_markdown)}
       alert('✓ Lien de partage copié dans le presse-papier :\n' + shareUrl);
     }
 
+    function renderRadarPoint(item, isPro) {
+      const pointText = typeof item === 'string' ? item : (item.point || '');
+      const sources = (item && Array.isArray(item.sources)) ? item.sources : [];
+      const bulletHtml = formatBullets(pointText);
+
+      let sourcesHtml = '';
+      if (sources.length > 0) {
+        const badgeColor = isPro ? 'emerald' : 'rose';
+        sourcesHtml = `
+          <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-1.5">
+            <span class="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
+              <i class="fa-solid fa-book-open text-${badgeColor}-400 text-[10px]"></i> Pour approfondir :
+            </span>
+            ${sources.map(s => `
+              <a href="${escapeHtml(s.url || '#')}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[11px] text-${badgeColor}-300 hover:text-white bg-${badgeColor}-950/50 hover:bg-${badgeColor}-900/60 px-2 py-0.5 rounded-md border border-${badgeColor}-800/60 transition shadow-sm">
+                <span>${escapeHtml(s.title || 'Source')}</span>
+                <i class="fa-solid fa-arrow-up-right-from-square text-[8px] opacity-70"></i>
+              </a>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800/60 space-y-1">
+          ${bulletHtml}
+          ${sourcesHtml}
+        </div>
+      `;
+    }
+
+    function renderRadarReportUI(data) {
+      const container = document.getElementById('radarResultsContainer');
+      const score = data.sentiment_score || 50;
+      const label = data.sentiment_label || 'Neutre / Mitigé';
+
+      container.classList.remove('hidden');
+      container.innerHTML = `
+        <!-- Sentiment Gauge Card -->
+        <div class="glass p-6 rounded-2xl border border-slate-800 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block mb-1">Rapport d'Opinion Deep Research</span>
+              <h2 class="text-xl font-extrabold text-white">${escapeHtml(data.entity)}</h2>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="copyRadarShareLink('${escapeHtml(data.entity)}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-link text-cyan-400"></i> Copier le lien
+              </button>
+              <button onclick="saveRadarReportToWatch()" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold px-3.5 py-2 rounded-xl border border-emerald-600 shadow-lg shadow-emerald-700/30 flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-bookmark"></i> Enregistrer
+              </button>
+            </div>
+          </div>
+
+          <p class="text-xs text-slate-300 leading-relaxed">${escapeHtml(data.summary)}</p>
+
+          <!-- Visual Sentiment Bar -->
+          <div class="space-y-1.5 pt-2">
+            <div class="flex justify-between text-xs font-bold">
+              <span class="text-emerald-400">🟢 Opinions Positives : ${score}%</span>
+              <span class="text-rose-400">🔴 Opinions Négatives : ${100 - score}%</span>
+            </div>
+            <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden flex border border-slate-800">
+              <div class="bg-emerald-500 h-full transition-all duration-500" style="width: ${score}%"></div>
+              <div class="bg-rose-500 h-full transition-all duration-500" style="width: ${100 - score}%"></div>
+            </div>
+            <div class="text-center text-[11px] text-slate-400 font-semibold pt-1">
+              Tendance globale : <span class="text-emerald-300 font-bold">${escapeHtml(label)}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pros vs Cons 2-Column Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- Pros Card -->
+          <div class="glass p-5 rounded-2xl border border-emerald-900/40 bg-emerald-950/20 space-y-3">
+            <h3 class="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-emerald-400"></i>
+              Points Forts & Avantages Majeurs (Pros)
+            </h3>
+            <div class="space-y-3 text-xs">
+              ${(data.pros || []).map(p => renderRadarPoint(p, true)).join('')}
+            </div>
+          </div>
+
+          <!-- Cons Card -->
+          <div class="glass p-5 rounded-2xl border border-rose-900/40 bg-rose-950/20 space-y-3">
+            <h3 class="text-xs font-bold text-rose-300 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
+              Limites, Controverses & Risques (Cons)
+            </h3>
+            <div class="space-y-3 text-xs">
+              ${(data.cons || []).map(c => renderRadarPoint(c, false)).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     async function submitRadarSearch(e) {
       if (e) e.preventDefault();
       const input = document.getElementById('radarInput');
@@ -1403,13 +1526,13 @@ ${escapeHtml(data.newsletter_markdown)}
 
       container.classList.remove('hidden');
       btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Analyse...`;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Deep Research...`;
 
       container.innerHTML = `
         <div class="text-center py-12 glass rounded-2xl border border-slate-800 p-8 space-y-3">
           <i class="fa-solid fa-chart-pie text-4xl text-emerald-400 animate-pulse mb-2"></i>
-          <h3 class="text-base font-bold text-white">Analyse du sentiment sur "${escapeHtml(entity)}" en cours...</h3>
-          <p class="text-xs text-slate-400">Gemini scanne vos articles sauvegardés et les actualités récentes du Web...</p>
+          <h3 class="text-base font-bold text-white">Deep Research en cours sur "${escapeHtml(entity)}"...</h3>
+          <p class="text-xs text-slate-400">Génération de 4 requêtes contradictoires, exploration Web (pros & cons) et synthèse stratégique...</p>
         </div>
       `;
 
@@ -1421,71 +1544,7 @@ ${escapeHtml(data.newsletter_markdown)}
         });
         const data = await res.json();
         currentRadarData = data;
-
-        const score = data.sentiment_score || 50;
-        const label = data.sentiment_label || 'Neutre / Mitigé';
-
-        container.innerHTML = `
-          <!-- Sentiment Gauge Card -->
-          <div class="glass p-6 rounded-2xl border border-slate-800 space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block mb-1">Rapport d'Opinion</span>
-                <h2 class="text-xl font-extrabold text-white">${escapeHtml(data.entity)}</h2>
-              </div>
-              <div class="flex items-center gap-2">
-                <button onclick="copyRadarShareLink('${escapeHtml(data.entity)}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 flex items-center gap-1.5 transition">
-                  <i class="fa-solid fa-link text-cyan-400"></i> Copier le lien
-                </button>
-                <button onclick="saveRadarReportToWatch()" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold px-3.5 py-2 rounded-xl border border-emerald-600 shadow-lg shadow-emerald-700/30 flex items-center gap-1.5 transition">
-                  <i class="fa-solid fa-bookmark"></i> Enregistrer
-                </button>
-              </div>
-            </div>
-
-            <p class="text-xs text-slate-300 leading-relaxed">${escapeHtml(data.summary)}</p>
-
-            <!-- Visual Sentiment Bar -->
-            <div class="space-y-1.5 pt-2">
-              <div class="flex justify-between text-xs font-bold">
-                <span class="text-emerald-400">🟢 Opinions Positives : ${score}%</span>
-                <span class="text-rose-400">🔴 Opinions Négatives : ${100 - score}%</span>
-              </div>
-              <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden flex border border-slate-800">
-                <div class="bg-emerald-500 h-full transition-all duration-500" style="width: ${score}%"></div>
-                <div class="bg-rose-500 h-full transition-all duration-500" style="width: ${100 - score}%"></div>
-              </div>
-              <div class="text-center text-[11px] text-slate-400 font-semibold pt-1">
-                Tendance globale : <span class="text-emerald-300 font-bold">${escapeHtml(label)}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pros vs Cons 2-Column Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <!-- Pros Card -->
-            <div class="glass p-5 rounded-2xl border border-emerald-900/40 bg-emerald-950/20 space-y-3">
-              <h3 class="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-2">
-                <i class="fa-solid fa-circle-check text-emerald-400"></i>
-                Points Forts & Avantages (Pros)
-              </h3>
-              <div class="space-y-2 text-xs">
-                ${(data.pros || []).map(p => formatBullets(p)).join('')}
-              </div>
-            </div>
-
-            <!-- Cons Card -->
-            <div class="glass p-5 rounded-2xl border border-rose-900/40 bg-rose-950/20 space-y-3">
-              <h3 class="text-xs font-bold text-rose-300 uppercase tracking-wider flex items-center gap-2">
-                <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
-                Limites & Controverses (Cons)
-              </h3>
-              <div class="space-y-2 text-xs">
-                ${(data.cons || []).map(c => formatBullets(c)).join('')}
-              </div>
-            </div>
-          </div>
-        `;
+        renderRadarReportUI(data);
       } catch (err) {
         container.innerHTML = `<div class="p-4 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-300 text-xs">Erreur lors de l'analyse de sentiment.</div>`;
       } finally {
@@ -1498,35 +1557,102 @@ ${escapeHtml(data.newsletter_markdown)}
       if (!currentRadarData) return;
 
       try {
-        // 1. Save to dedicated sentiment_reports table
-        await fetch('/api/sentiment/reports', {
+        // Save EXCLUSIVELY to dedicated sentiment_reports table (keeps main watch feed clean!)
+        const res = await fetch('/api/sentiment/reports', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(currentRadarData)
         });
 
-        // 2. Save as Watch Entry in articles table for RAG Chatbot querying
-        const prosText = (currentRadarData.pros || []).join('\n');
-        const consText = (currentRadarData.cons || []).join('\n');
-        const articlePayload = {
-          title: `Rapport d'opinion : ${currentRadarData.entity} (${currentRadarData.sentiment_score}% Positif - ${currentRadarData.sentiment_label})`,
-          category: 'Tech & IA',
-          site_name: 'Radar & Sentiment',
-          summary: `🟢 ${currentRadarData.sentiment_score}% Positif | 🔴 ${100 - currentRadarData.sentiment_score}% Négatif\n\n${currentRadarData.summary}`,
-          content: `Rapport d'opinion sur ${currentRadarData.entity} :\n\nRésumé :\n${currentRadarData.summary}\n\nPoints Forts :\n${prosText}\n\nLimites :\n${consText}`,
-          notes: `Enregistré depuis le Radar d'Opinion SYNAPSE.`
-        };
-
-        await fetch('/api/articles', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(articlePayload)
-        });
-
-        alert('✓ Rapport d\'opinion enregistré dans votre veille !');
-        fetchArticles();
+        if (res.ok) {
+          alert('✓ Rapport d\'opinion enregistré dans l\'historique du Radar !');
+          await loadRadarHistory();
+        }
       } catch (e) {
         alert('Erreur lors de la sauvegarde du rapport.');
+      }
+    }
+
+    async function loadRadarHistory() {
+      const container = document.getElementById('radarHistoryContainer');
+      const countEl = document.getElementById('radarHistoryCount');
+      if (!container) return;
+
+      try {
+        const res = await fetch('/api/sentiment/reports');
+        if (!res.ok) return;
+        const reports = await res.json();
+
+        if (countEl) {
+          countEl.innerText = `${reports.length} rapport${reports.length > 1 ? 's' : ''} sauvegardé${reports.length > 1 ? 's' : ''}`;
+        }
+
+        if (reports.length === 0) {
+          container.innerHTML = `
+            <div class="text-center py-6 col-span-full text-xs text-slate-500">
+              Aucun rapport d'opinion sauvegardé pour l'instant. Cliquez sur "Enregistrer" après une analyse.
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = reports.map(r => {
+          const score = r.sentiment_score || 50;
+          const badgeClass = score >= 60 ? 'text-emerald-400 bg-emerald-950/60 border-emerald-800/60' : (score <= 40 ? 'text-rose-400 bg-rose-950/60 border-rose-800/60' : 'text-amber-400 bg-amber-950/60 border-amber-800/60');
+          return `
+            <div class="glass p-4 rounded-xl border border-slate-800 space-y-2.5 flex flex-col justify-between">
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-xs font-bold text-white truncate">${escapeHtml(r.entity)}</h4>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full border ${badgeClass} font-semibold">
+                    ${score}%
+                  </span>
+                </div>
+                <p class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                  ${escapeHtml(r.summary || '')}
+                </p>
+              </div>
+
+              <div class="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
+                <button onclick="viewSavedRadarReport('${escapeHtml(r.entity)}')" class="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 text-[11px] transition">
+                  <i class="fa-solid fa-eye text-[10px]"></i> Consulter
+                </button>
+                <button onclick="deleteRadarReport(${r.id})" class="text-slate-500 hover:text-rose-400 p-1 transition" title="Supprimer de l'historique">
+                  <i class="fa-solid fa-trash-can text-[11px]"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        console.error('Erreur chargement historique radar:', e);
+      }
+    }
+
+    async function viewSavedRadarReport(entity) {
+      try {
+        const res = await fetch(`/api/sentiment/reports/${encodeURIComponent(entity)}`);
+        if (res.ok) {
+          const data = await res.json();
+          currentRadarData = data;
+          renderRadarReportUI(data);
+          prefillRadarSearch(entity);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      } catch (e) {
+        alert('Erreur lors du chargement du rapport sauvegardé.');
+      }
+    }
+
+    async function deleteRadarReport(id) {
+      if (!confirm('Supprimer ce rapport de l\'historique ?')) return;
+      try {
+        const res = await fetch(`/api/sentiment/reports/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          loadRadarHistory();
+        }
+      } catch (e) {
+        alert('Erreur lors de la suppression.');
       }
     }
 

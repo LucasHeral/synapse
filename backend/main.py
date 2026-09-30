@@ -366,6 +366,26 @@ def chat_kb_endpoint(req: ChatRequest):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM articles WHERE is_archived = 0 ORDER BY created_at DESC LIMIT 50")
     articles = [dict(r) for r in cursor.fetchall()]
+
+    # Also include saved sentiment reports in RAG context
+    cursor.execute("SELECT * FROM sentiment_reports ORDER BY updated_at DESC LIMIT 20")
+    for r in cursor.fetchall():
+        d = dict(r)
+        pros_raw = json.loads(d.get("pros_json") or "[]")
+        cons_raw = json.loads(d.get("cons_json") or "[]")
+        pros = "\n".join([p.get("point", str(p)) if isinstance(p, dict) else str(p) for p in pros_raw])
+        cons = "\n".join([c.get("point", str(c)) if isinstance(c, dict) else str(c) for c in cons_raw])
+        articles.append(
+            {
+                "id": f"radar-{d['id']}",
+                "title": f"Rapport d'opinion : {d['entity']} ({d['sentiment_score']}% - {d['sentiment_label']})",
+                "site_name": "Radar d'Opinion",
+                "author": "SYNAPSE Deep Research",
+                "summary": d.get("summary") or "",
+                "content": f"Résumé : {d.get('summary')}\n\nPoints Forts :\n{pros}\n\nPoints Faibles :\n{cons}",
+                "url": f"/?radar={d['entity']}",
+            }
+        )
     conn.close()
 
     res = answer_rag_question(req.query, articles, model=req.model)
@@ -451,6 +471,24 @@ def save_sentiment_report(req: SentimentReportCreate):
     return row
 
 
+@app.get("/api/sentiment/reports")
+def list_sentiment_reports():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM sentiment_reports ORDER BY updated_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+
+    results = []
+    for r in rows:
+        d = dict(r)
+        d["pros"] = json.loads(d.get("pros_json") or "[]")
+        d["cons"] = json.loads(d.get("cons_json") or "[]")
+        d["sources"] = json.loads(d.get("sources_json") or "[]")
+        results.append(d)
+    return results
+
+
 @app.get("/api/sentiment/reports/{entity}")
 def get_sentiment_report(entity: str):
     conn = get_db_connection()
@@ -467,6 +505,16 @@ def get_sentiment_report(entity: str):
     res["cons"] = json.loads(res.get("cons_json") or "[]")
     res["sources"] = json.loads(res.get("sources_json") or "[]")
     return res
+
+
+@app.delete("/api/sentiment/reports/{report_id}")
+def delete_sentiment_report(report_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM sentiment_reports WHERE id = ?", (report_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "success", "id": report_id}
 
 
 @app.get("/api/articles")

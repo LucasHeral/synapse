@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -40,6 +40,6 @@ class SentimentReportCreate(BaseModel):
     sentiment_score: int
     sentiment_label: str
     summary: str
-    pros: Optional[List[str]] = []
-    cons: Optional[List[str]] = []
+    pros: Optional[List[Any]] = []
+    cons: Optional[List[Any]] = []
     sources: Optional[List[dict]] = []

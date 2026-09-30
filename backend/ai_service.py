@@ -10,7 +10,7 @@ import trafilatura
 from bs4 import BeautifulSoup
 from google import genai
 
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 _vertex_client = None
 
 
@@ -292,8 +292,42 @@ Consignes de rédaction indispensables :
         return {"answer": f"Erreur lors de l'analyse : {str(e)}", "used_web_search": False, "model_used": "error"}
 
 
+def generate_radar_search_queries(client, entity: str) -> List[str]:
+    """Generates 4 tailored search queries designed to uncover both competitive advantages and hidden limitations/controversies."""
+    prompt = f"""Tu es un analyste de renseignement technologique et économique.
+Nous devons sonder en profondeur l'opinion et le sentiment sur l'entité : "{entity}".
+Génère 4 requêtes de recherche web complémentaires en anglais et français, ultra-ciblées pour ratisser à la fois le positif et le négatif.
+
+Les 4 axes obligatoires :
+1. Avantages concurrentiels, souveraineté, écosystème, investisseurs et forces majeures.
+2. Critiques acerbes, controverses, limites techniques, déceptions des utilisateurs/développeurs.
+3. Modèle économique, rentabilité, pivot stratégique (ex: service/consulting vs recherche, coûts, gouvernance).
+4. Retours d'expérience concrets, benchmarks réels, discussions communauté (Hacker News, Reddit, dev).
+
+Réponds UNIQUEMENT avec un JSON contenant une liste de 4 chaînes de caractères :
+["requete 1", "requete 2", "requete 3", "requete 4"]
+"""
+    try:
+        output, _ = generate_with_gemini(client, prompt)
+        output = re.sub(r"^```json\s*", "", output)
+        output = re.sub(r"^```\s*", "", output)
+        output = re.sub(r"\s*```$", "", output)
+        queries = json.loads(output)
+        if isinstance(queries, list) and len(queries) >= 3:
+            return queries[:4]
+    except Exception as e:
+        print("Dynamic query generation error:", e)
+
+    return [
+        f"{entity} major advantages competitive moat sovereign ecosystem",
+        f"{entity} controversies critiques limitations problems complaints",
+        f"{entity} business model pivot consulting risks governance",
+        f"{entity} developer feedback benchmarks issues 2026",
+    ]
+
+
 def analyze_sentiment_radar(entity: str, articles: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Analyzes overall sentiment, pros, cons and recent web opinions for a tech entity."""
+    """Deep Research sentiment analysis: generates dynamic multi-faceted queries, extracts rich web evidence, and synthesizes nuanced pros/cons."""
     client = get_vertex_client()
     if not client:
         return {
@@ -318,54 +352,92 @@ def analyze_sentiment_radar(entity: str, articles: List[Dict[str, Any]]) -> Dict
             matching_articles.append(a)
             internal_snippets.append(f"- [{a.get('site_name') or 'Veille'}] {a.get('title')}: {s[:300]}")
 
-    # 2. Gather live web search context
-    web_snippets = []
-    try:
-        search_query = f"{entity} opinion reviews news 2026"
-        search_url = f"https://html.duckduckgo.com/html/?q={requests.utils.quote(search_query)}"
-        headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
-        res = requests.get(search_url, headers=headers, timeout=5)
-        if res.status_code == 200:
-            soup = BeautifulSoup(res.text, "html.parser")
-            web_snippets = [a.get_text().strip() for a in soup.find_all("a", class_="result__snippet")[:5]]
-    except Exception as e:
-        print("Web search sentiment error:", e)
+    # 2. Dynamic Deep Research Web Queries (positive + adversarial negative)
+    search_queries = generate_radar_search_queries(client, entity)
+    web_sources_list = []
+    seen_urls = set()
 
-    context_str = (
-        "Articles de veille locale :\n"
-        + "\n".join(internal_snippets[:5])
-        + "\n\nActualités Web récentes :\n"
-        + "\n".join(web_snippets)
+    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
+
+    # Add internal matching articles to candidate sources
+    for i, a in enumerate(matching_articles[:4], 1):
+        web_sources_list.append(
+            {
+                "id": len(web_sources_list) + 1,
+                "title": a.get("title") or "Article Veille",
+                "url": a.get("url") or f"http://127.0.0.1:8000/?article={a.get('id')}",
+                "snippet": (a.get("summary") or a.get("content") or "")[:400],
+                "type": "Veille locale",
+            }
+        )
+
+    for sq in search_queries:
+        try:
+            search_url = f"https://html.duckduckgo.com/html/?q={quote(sq)}"
+            res = requests.get(search_url, headers=headers, timeout=4)
+            if res.status_code == 200:
+                soup = BeautifulSoup(res.text, "html.parser")
+                results = soup.find_all("div", class_="result__body")
+                for r in results[:4]:
+                    snippet_el = r.find("a", class_="result__snippet")
+                    title_el = r.find("a", class_="result__a") or r.find("a", class_="result__url")
+                    if snippet_el and title_el:
+                        url = title_el.get("href")
+                        title = title_el.get_text().strip()
+                        snippet = snippet_el.get_text().strip()
+                        if url and url not in seen_urls and len(snippet) > 20:
+                            seen_urls.add(url)
+                            web_sources_list.append(
+                                {
+                                    "id": len(web_sources_list) + 1,
+                                    "title": title[:100],
+                                    "url": url,
+                                    "snippet": snippet,
+                                    "type": "Web",
+                                }
+                            )
+        except Exception as e:
+            print(f"Search error for query '{sq}':", e)
+
+    # Format numbered sources context for Gemini
+    sources_text_block = "\n".join(
+        [f"[{s['id']}] {s['title']} ({s['url']}) :\n{s['snippet']}" for s in web_sources_list[:16]]
     )
 
-    prompt = f"""Tu es un analyste senior spécialisé en étude d'opinion et sentiment dans la tech et l'IA.
-Effectue une analyse de sentiment approfondie, équilibrée et objective sur l'entité suivante : "{entity}".
+    prompt = f"""Tu es un analyste stratégique senior de haut niveau (type cabinet d'intelligence économique et analyste tech).
+Tu effectues une étude d'opinion et d'impact rigoureuse, sans concession et nuancée sur : "{entity}".
 
-Informations contextuelles issues de la veille et du Web :
-{context_str[:10000]}
+Voici les sources contextuelles issues de l'investigation contradictoire (veille locale + web pros/cons/controverses) :
+{sources_text_block[:12000]}
 
-Consignes de rédaction :
-1. "sentiment_score" : Un entier entre 0 et 100 représentant le pourcentage d'opinions positives (ex: 75 = 75% Positif / 25% Négatif).
-2. "sentiment_label" : Une étiquette courte en français (ex: "Très Positif", "Plutôt Positif", "Neutre / Mitigé", "Plutôt Négatif").
-3. "summary" : Un résumé d'opinion clair et captivant de 2-3 phrases en français.
-4. "pros" : Une liste de 3 points forts / arguments positifs majeurs (chaque point sous forme de puces avec terme en gras : "• **Point fort** : Détail...").
-5. "cons" : Une liste de 3 points faibles / controverses / limites majeurs (chaque point sous forme de puces avec terme en gras : "• **Limite** : Détail...").
+Consignes impératives pour l'analyse :
+1. "sentiment_score" : Un entier entre 0 et 100 reflétant la balance globale d'opinion (ex: 60 = 60% positif / 40% négatif).
+2. "sentiment_label" : Libellé exact en français (ex: "Très Favorable", "Plutôt Favorable", "Mitigé / Contrasté", "Plutôt Critique").
+3. "summary" : Un résumé stratégique percutant en français (3 phrases riches) mettant en avant la tension principale entre ses atouts majeurs et ses réels défis.
+4. "pros" : 3 points forts / atouts majeurs réels et sourcés. Sois concret (ex: souveraineté européenne, appuis institutionnels/politiques, performance technique mesurée, adoption industrielle). Pour CHAQUE point fort, associe 1 ou 2 sources réelles issues de la liste ci-dessus avec leur titre et url.
+5. "cons" : 3 limites, controverses ou aspects limitants MAJEURS et réalistes. Les points limitants doivent être précis et étayés (ex: dérive vers du consulting/service au détriment de la R&D pure, manque de transparence, dépendance infrastructurelle, gouvernance contestée, réticences communauté). Ne sors JAMAIS de banalité creuse comme "marché compétitif" ou "doit faire ses preuves". Pour CHAQUE point faible, associe 1 ou 2 sources réelles issues de la liste ci-dessus avec leur titre et url.
 
-Réponds EXCLUSIVEMENT au format JSON valide suivant :
+Format de réponse OBLIGATOIRE en JSON pur :
 {{
   "entity": "{entity}",
-  "sentiment_score": 75,
-  "sentiment_label": "Plutôt Positif",
-  "summary": "Aperçu global...",
+  "sentiment_score": 65,
+  "sentiment_label": "Plutôt Favorable",
+  "summary": "Synthèse stratégique...",
   "pros": [
-    "• **Avantage 1** : Détail...",
-    "• **Avantage 2** : Détail...",
-    "• **Avantage 3** : Détail..."
+    {{
+      "point": "• **Titre 1** : Détail factuel...",
+      "sources": [
+        {{"title": "Titre source", "url": "https://..."}}
+      ]
+    }}
   ],
   "cons": [
-    "• **Limite 1** : Détail...",
-    "• **Limite 2** : Détail...",
-    "• **Limite 3** : Détail..."
+    {{
+      "point": "• **Titre 1** : Détail factuel...",
+      "sources": [
+        {{"title": "Titre source", "url": "https://..."}}
+      ]
+    }}
   ]
 }}
 """
@@ -377,19 +449,16 @@ Réponds EXCLUSIVEMENT au format JSON valide suivant :
         output = re.sub(r"\s*```$", "", output)
 
         data = json.loads(output)
-        data["sources"] = [
-            {"title": a.get("title"), "site_name": a.get("site_name"), "url": a.get("url")}
-            for a in matching_articles[:3]
-        ]
+        data["sources"] = web_sources_list[:8]
         return data
     except Exception as e:
         print("Sentiment analysis failed:", e)
         return {
             "entity": entity,
-            "sentiment_score": 60,
-            "sentiment_label": "Plutôt Positif",
+            "sentiment_score": 50,
+            "sentiment_label": "Mitigé / Analyse Partielle",
             "summary": f"Opinion globale recueillie sur {entity}.",
-            "pros": [f"• **Popularité** : {entity} suscite un fort intérêt."],
-            "cons": ["• **Défis** : Sujet soumis à des débats fréquents."],
+            "pros": [f"• **Intérêt** : Forte visibilité de {entity} sur le marché."],
+            "cons": ["• **Vigilance** : Sujet complexe nécessitant une analyse approfondie."],
             "sources": [],
         }
