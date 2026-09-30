@@ -1,0 +1,12 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+*.db
+backend/synapse_veille.db
+test_syntax.js
+find_invalid_token.js

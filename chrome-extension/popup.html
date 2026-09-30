@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>SYNAPSE - Enregistrer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      width: 360px;
+      background-color: #0b0f19;
+      color: #f1f5f9;
+      padding: 16px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .logo-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      display: flex;
+      align-items: center;
+      justify-content: justify-center;
+      color: #fff;
+      font-weight: bold;
+      font-size: 16px;
+      line-height: 32px;
+      text-align: center;
+    }
+    .logo-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.3px;
+    }
+    .logo-sub {
+      font-size: 10px;
+      color: #8b5cf6;
+      font-weight: 600;
+    }
+    .status-badge {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-weight: 600;
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+    input[type="text"], textarea, select {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: #f8fafc;
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus, textarea:focus, select:focus {
+      border-color: #6366f1;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 52px;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+    .row > div {
+      flex: 1;
+    }
+    .fav-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #cbd5e1;
+      cursor: pointer;
+      user-select: none;
+    }
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+      transition: opacity 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .btn-submit:hover {
+      opacity: 0.95;
+    }
+    .btn-submit:active {
+      transform: scale(0.98);
+    }
+    .open-app-btn {
+      display: block;
+      text-align: center;
+      margin-top: 10px;
+      font-size: 11px;
+      color: #818cf8;
+      text-decoration: none;
+    }
+    .open-app-btn:hover {
+      text-decoration: underline;
+    }
+    .toast {
+      display: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      text-align: center;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .toast.success {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    .toast.error {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo-group">
+      <div class="logo-icon">S</div>
+      <div>
+        <div class="logo-title">SYNAPSE</div>
+        <div class="logo-sub">Tech Watch Hub</div>
+      </div>
+    </div>
+    <div id="statusBadge" class="status-badge">Connecté</div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <form id="saveForm">
+    <input type="hidden" id="url">
+    <input type="hidden" id="imageUrl">
+
+    <div class="form-group">
+      <label for="title">Titre</label>
+      <input type="text" id="title" required placeholder="Titre de l'article ou post">
+    </div>
+
+    <div class="row form-group">
+      <div>
+        <label for="category">Catégorie</label>
+        <select id="category">
+          <option value="Tech & IA">Tech & IA</option>
+          <option value="LinkedIn">LinkedIn</option>
+          <option value="Dev & Tech">Dev & Tech</option>
+          <option value="Business & SaaS">Business & SaaS</option>
+          <option value="Design & UX">Design & UX</option>
+          <option value="Sécurité">Sécurité</option>
+          <option value="Général">Général</option>
+        </select>
+      </div>
+      <div>
+        <label for="siteName">Source</label>
+        <input type="text" id="siteName" placeholder="LinkedIn, Medium...">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="summary">Résumé / Extrait</label>
+      <textarea id="summary" placeholder="Résumé ou extrait sélectionné..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="notes">Notes personnelles</label>
+      <input type="text" id="notes" placeholder="Mots-clés, réflexions, projet...">
+    </div>
+
+    <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
+      <label class="fav-btn">
+        <input type="checkbox" id="isFavorite">
+        <span>★ Marquer comme favori</span>
+      </label>
+    </div>
+
+    <button type="submit" id="submitBtn" class="btn-submit">
+      <span>Enregistrer dans ma veille</span>
+    </button>
+  </form>
+
+  <a href="http://localhost:8000" target="_blank" class="open-app-btn">Ouvrir mon Hub de Veille (http://localhost:8000) ↗</a>
+
+  <script src="popup.js"></script>
+</body>
+</html>

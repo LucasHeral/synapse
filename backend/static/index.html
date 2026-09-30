@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SYNAPSE - Hub de Veille Technologique</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f3ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              900: '#1e1b4b',
+              accent: '#8b5cf6',
+              cyan: '#06b6d4',
+            },
+            dark: {
+              bg: '#0f172a',
+              card: '#1e293b',
+              sidebar: '#0b1120',
+              border: '#334155'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #0b0f19;
+      color: #f1f5f9;
+    }
+    .glass {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-sidebar {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .glow-accent {
+      box-shadow: 0 0 20px -3px rgba(99, 102, 241, 0.35);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #a855f7, #6366f1, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #6366f1;
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden text-slate-200">
+
+  <!-- Top Navigation Bar -->
+  <header class="h-16 glass z-20 px-6 flex items-center justify-between border-b border-slate-800">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+        <i class="fa-solid fa-brain text-white text-lg"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+          SYNAPSE <span class="gradient-text font-black text-xs px-2 py-0.5 rounded-md bg-indigo-950/80 border border-indigo-500/30">HUB</span>
+        </h1>
+      </div>
+    </div>
+
+    <!-- Central Search Bar -->
+    <div class="flex-1 max-w-xl mx-8">
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input 
+          type="text" 
+          id="searchInput"
+          placeholder="Rechercher dans la veille (titre, auteur, contenu, notes...)..."
+          class="w-full bg-slate-900/80 text-sm text-slate-100 placeholder-slate-500 pl-10 pr-10 py-2 rounded-xl border border-slate-700/60 focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
+        >
+        <button id="clearSearchBtn" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+          <i class="fa-solid fa-circle-xmark"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center space-x-3">
+      <button onclick="openAddModal()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center space-x-2 transition-all transform active:scale-95">
+        <i class="fa-solid fa-plus"></i>
+        <span>Ajouter un lien</span>
+      </button>
+      <button onclick="fetchArticles()" title="Actualiser" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition border border-slate-700">
+        <i class="fa-solid fa-arrows-rotate text-sm"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- Left Sidebar -->
+    <aside class="w-64 glass-sidebar p-4 flex flex-col justify-between shrink-0 overflow-y-auto">
+      <div class="space-y-6">
+        
+        <!-- Stats Summary -->
+        <div class="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80">
+          <div class="text-center p-2 rounded-lg bg-slate-800/40">
+            <span class="block text-xs text-slate-400 font-medium">Total</span>
+            <span id="statTotal" class="text-lg font-bold text-indigo-400">0</span>
+          </div>
+          <div class="text-center p-2 rounded-lg bg-slate-800/40">
+            <span class="block text-xs text-slate-400 font-medium">Favoris</span>
+            <span id="statFavorites" class="text-lg font-bold text-amber-400">0</span>
+          </div>
+        </div>
+
+        <!-- Main Mode Tabs -->
+        <div>
+          <h2 class="text-xs uppercase tracking-wider font-semibold text-slate-400 mb-2.5 px-2">Navigation</h2>
+          <nav class="space-y-1">
+            <button onclick="showAllArticles()" id="tab-btn-articles" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between text-indigo-300 bg-indigo-950/70 border border-indigo-800/40 transition">
+              <span class="flex items-center space-x-2.5">
+                <i class="fa-solid fa-layer-group text-indigo-400"></i>
+                <span>Flux de Veille</span>
+              </span>
+              <span id="count-all" class="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-bold">0</span>
+            </button>
+
+            <button onclick="switchTab('chatbot')" id="tab-btn-chatbot" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition">
+              <i class="fa-solid fa-robot text-purple-400"></i>
+              <span>Chatbot</span>
+            </button>
+
+            <button onclick="switchTab('newsletter')" id="tab-btn-newsletter" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition">
+              <i class="fa-solid fa-paper-plane text-cyan-400"></i>
+              <span>Newsletter Hebdo</span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- Quick Filters -->
+
+        <!-- Categories List -->
+        <div>
+          <div class="flex items-center justify-between mb-2.5 px-2">
+            <h2 class="text-xs uppercase tracking-wider font-semibold text-slate-400">Catégories</h2>
+          </div>
+          <div id="categoriesList" class="space-y-1">
+            <div class="text-xs text-slate-500 px-3 py-2">Chargement des catégories...</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer Info -->
+      <div class="pt-4 border-t border-slate-800/80 text-center">
+        <p class="text-[11px] text-slate-500">Synapse AI Base Locale — SQLite Sync</p>
+        <span class="inline-flex items-center gap-1.5 mt-1 text-[10px] text-emerald-400 font-medium px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/30">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> App Locale Prête
+        </span>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col overflow-hidden bg-slate-950/50">
+      
+      <!-- View 1: Flux de Veille (Articles Grid) -->
+      <div id="viewArticles" class="flex-1 flex flex-col overflow-hidden">
+        <div class="h-12 px-6 flex items-center justify-between border-b border-slate-800/80 bg-slate-900/30 shrink-0">
+          <div class="flex items-center space-x-2 text-xs text-slate-400">
+            <span class="font-medium text-slate-300">Filtre actif :</span>
+            <span id="activeFilterBadge" class="bg-indigo-900/50 text-indigo-300 px-2.5 py-0.5 rounded-md border border-indigo-700/40 font-semibold">Tous</span>
+          </div>
+          <div id="resultsCount" class="text-xs text-slate-400 font-medium">0 article(s) trouvé(s)</div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6">
+          <div id="articlesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+
+          <!-- Empty State -->
+          <div id="emptyState" class="hidden flex-col items-center justify-center py-20 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-slate-800/80 flex items-center justify-center text-slate-500 mb-4 border border-slate-700/50">
+              <i class="fa-solid fa-inbox text-2xl"></i>
+            </div>
+            <h3 class="text-base font-semibold text-slate-300">Aucune veille enregistrée pour le moment</h3>
+            <p class="text-xs text-slate-500 max-w-sm mt-1 mb-4">Utilisez l'extension Chrome ou le bouton "+" ci-dessus pour ajouter des articles, posts LinkedIn ou pages web.</p>
+            <button onclick="openAddModal()" class="text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-950/80 px-3.5 py-2 rounded-lg border border-indigo-800/50">
+              + Ajouter mon premier lien
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- View 2: Chatbot -->
+      <div id="viewChatbot" class="hidden flex-1 flex flex-col overflow-hidden">
+        <div class="h-12 px-6 flex items-center justify-between border-b border-slate-800/80 bg-slate-900/30 shrink-0">
+          <div class="flex items-center space-x-2 text-xs text-purple-300 font-semibold">
+            <i class="fa-solid fa-robot text-purple-400"></i>
+            <span>Chatbot — Assistant IA sur l'ensemble de votre base de connaissances</span>
+          </div>
+        </div>
+
+        <div class="flex-1 flex flex-col overflow-hidden p-6 max-w-4xl mx-auto w-full">
+          <!-- Chat Message Feed -->
+          <div id="chatMessages" class="flex-1 overflow-y-auto space-y-4 pr-2 mb-4">
+            <div class="flex items-start gap-3 p-4 rounded-2xl bg-slate-900 border border-slate-800 text-sm">
+              <div class="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-brain"></i>
+              </div>
+              <div class="space-y-1">
+                <span class="font-bold text-xs text-purple-300">Synapse AI Assistant</span>
+                <p class="text-slate-300 leading-relaxed text-xs">Bonjour ! Je suis connecté à l'intégralité de vos articles et posts sauvegardés. Posez-moi des questions comme :<br>• <i>"Qu'est-ce qu'on a vu sur les architectures multi-agents ?"</i><br>• <i>"Quels posts parlent de Fred Brooks ?"</i><br>• <i>"Fais-moi un récapitulatif des tendances IA de la semaine"</i></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chat Input Bar -->
+          <form onsubmit="submitChatQuery(event)" class="relative flex gap-2">
+            <input 
+              type="text" 
+              id="chatInput"
+              required
+              placeholder="Posez une question sur l'ensemble de votre veille..."
+              class="flex-1 bg-slate-900 text-sm text-slate-100 placeholder-slate-500 pl-4 pr-12 py-3 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-500 shadow-inner"
+            >
+            <button type="submit" id="chatSubmitBtn" class="bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs px-5 py-3 rounded-xl shadow-lg shadow-purple-600/30 flex items-center gap-2">
+              <span>Envoyer</span>
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- View 3: Newsletter Hebdomadaire -->
+      <div id="viewNewsletter" class="hidden flex-1 flex flex-col overflow-hidden">
+        <div class="h-12 px-6 flex items-center justify-between border-b border-slate-800/80 bg-slate-900/30 shrink-0">
+          <div class="flex items-center space-x-2 text-xs text-cyan-300 font-semibold">
+            <i class="fa-solid fa-newspaper text-cyan-400"></i>
+            <span>Générateur de Newsletter / Digest Hebdomadaire IA</span>
+          </div>
+          <button onclick="generateNewsletter()" id="genNewsletterBtn" class="bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-medium text-xs px-4 py-1.5 rounded-lg shadow-lg flex items-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>Générer Newsletter (7 derniers jours)</span>
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full">
+          <div id="newsletterContainer" class="glass rounded-2xl p-8 relative space-y-4">
+            <div class="text-center py-12">
+              <i class="fa-solid fa-paper-plane text-4xl text-cyan-400 mb-3 opacity-80"></i>
+              <h3 class="text-lg font-bold text-white mb-2">Générez votre récapitulatif hebdo</h3>
+              <p class="text-xs text-slate-400 max-w-md mx-auto mb-6">L'IA de Synapse va regrouper tous vos posts et articles de la semaine par thématique pour créer une synthèse prête à être partagée.</p>
+              <button onclick="generateNewsletter()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-cyan-600/30">
+                ✨ Générer la Newsletter maintenant
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Modal: Manual Add Article -->
+  <div id="addModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl p-6 relative">
+      <button onclick="closeAddModal()" class="absolute right-4 top-4 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="flex items-center space-x-3 mb-5">
+        <div class="w-9 h-9 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center">
+          <i class="fa-solid fa-link text-base"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white">Ajouter un lien à ma Veille</h3>
+          <p class="text-xs text-slate-400">Entrez l'URL pour extraire automatiquement les métadonnées</p>
+        </div>
+      </div>
+
+      <form id="addForm" onsubmit="submitAddForm(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">URL de l'article / post *</label>
+          <div class="flex gap-2">
+            <input type="url" id="addUrl" required placeholder="https://linkedin.com/... ou https://techcrunch.com/..." class="flex-1 bg-slate-950 text-sm text-slate-100 p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-indigo-500">
+            <button type="button" onclick="extractFromUrl()" id="extractBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium px-3 py-2 rounded-xl border border-slate-700 flex items-center gap-1.5 whitespace-nowrap">
+              <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> Auto-extraire
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Titre *</label>
+          <input type="text" id="addTitle" required placeholder="Titre de l'article ou post" class="w-full bg-slate-950 text-sm text-slate-100 p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Catégorie</label>
+            <select id="addCategory" class="w-full bg-slate-950 text-sm text-slate-100 p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-indigo-500">
+              <option value="Tech & IA">Tech & IA</option>
+              <option value="LinkedIn">LinkedIn</option>
+              <option value="Dev & Tech">Dev & Tech</option>
+              <option value="Business & SaaS">Business & SaaS</option>
+              <option value="Design & UX">Design & UX</option>
+              <option value="Sécurité">Sécurité</option>
+              <option value="Général">Général</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Source / Média</label>
+            <input type="text" id="addSiteName" placeholder="ex: TechCrunch, LinkedIn" class="w-full bg-slate-950 text-sm text-slate-100 p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Résumé / Description</label>
+          <textarea id="addSummary" rows="2" placeholder="Résumé rapide ou extrait..." class="w-full bg-slate-950 text-sm text-slate-100 p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-indigo-500"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Notes personnelles & Mots-clés</label>
+          <input type="text" id="addNotes" placeholder="Remarques, idées, projet associé..." class="w-full bg-slate-950 text-sm text-slate-100 p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-2">
+          <button type="button" onclick="closeAddModal()" class="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white">Annuler</button>
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30">
+            Enregistrer dans ma veille
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Article Reader (Lecture Complète du Post) -->
+  <div id="readerModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 md:p-8">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col relative overflow-hidden">
+      <button onclick="closeReaderModal()" class="absolute right-5 top-5 text-slate-400 hover:text-white bg-slate-800/80 w-8 h-8 rounded-full flex items-center justify-center border border-slate-700">
+        <i class="fa-solid fa-xmark text-base"></i>
+      </button>
+
+      <!-- Reader Header -->
+      <div class="mb-4 pb-4 border-b border-slate-800 pr-10">
+        <div class="flex items-center space-x-2 text-xs mb-2">
+          <span id="readerSiteBadge" class="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-950 text-blue-300 border border-blue-800/40">LinkedIn</span>
+          <span id="readerCategoryBadge" class="bg-indigo-950/80 text-indigo-300 px-2.5 py-0.5 rounded text-[11px] font-medium border border-indigo-800/30">Catégorie</span>
+          <span id="readerDate" class="text-slate-500 font-mono text-[11px] ml-auto"></span>
+        </div>
+
+        <h2 id="readerTitle" class="text-lg md:text-xl font-bold text-white leading-snug mb-2"></h2>
+
+        <div class="flex items-center justify-between text-xs pt-1">
+          <div id="readerAuthor" class="font-semibold text-indigo-300 flex items-center gap-1.5"></div>
+          <a id="readerSourceBtn" href="#" target="_blank" rel="noopener" class="text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 bg-indigo-950/50 px-3 py-1.5 rounded-lg border border-indigo-800/40">
+            <span>Ouvrir la source</span>
+            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Mode Switcher: Article Complet vs Résumé IA -->
+      <div class="flex items-center justify-between bg-slate-950 p-1 rounded-xl border border-slate-800 mb-4 shrink-0">
+        <div class="flex space-x-1 w-full">
+          <button id="readerTabFull" onclick="setReaderMode('full')" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition bg-indigo-950 text-indigo-300 border border-indigo-800/40">
+            <i class="fa-solid fa-file-lines text-indigo-400"></i>
+            <span>Article Complet</span>
+          </button>
+          <button id="readerTabSummary" onclick="setReaderMode('summary')" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition text-slate-400 hover:text-white">
+            <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i>
+            <span>Résumé IA</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Article Body Content -->
+      <div class="flex-1 overflow-y-auto pr-2 space-y-4">
+        <div id="readerBody" class="text-slate-200 text-xs md:text-sm leading-relaxed font-normal selection:bg-indigo-500 selection:text-white"></div>
+        
+        <div id="readerNotesContainer" class="hidden mt-4 p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-indigo-200">
+          <span class="font-bold text-indigo-400 uppercase tracking-wider block mb-1">Notes personnelles</span>
+          <p id="readerNotes" class="italic text-slate-300 text-xs"></p>
+        </div>
+
+        <!-- Mini Article Q&A Chatbot -->
+        <div id="articleChatContainer" class="mt-6 pt-4 border-t border-slate-800/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+              <i class="fa-solid fa-comments text-purple-400"></i>
+              Discuter avec cet article (Q&A IA + Web Search)
+            </span>
+            <span class="text-[10px] text-slate-500 font-mono">Gemini 2.5</span>
+          </div>
+
+          <!-- Article Chat Thread -->
+          <div id="articleChatThread" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+
+          <!-- Quick Suggestions -->
+          <div class="flex flex-wrap gap-1.5 text-[11px]">
+            <button onclick="sendQuickArticleQuestion('Quels sont les chiffres et métriques clés de cet article ?')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">
+              💡 Chiffres clés ?
+            </button>
+            <button onclick="sendQuickArticleQuestion('Effectue une recherche web sur les concurrents et cas d\'usage récents')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">
+              🌐 Recherche Web / Concurrents ?
+            </button>
+          </div>
+
+          <!-- Question Input -->
+          <form onsubmit="submitArticleChat(event)" class="flex gap-2">
+            <input type="text" id="articleChatInput" placeholder="Posez une question sur cet article..." class="flex-1 bg-slate-950 text-xs text-slate-200 px-3 py-2 rounded-xl border border-slate-800 focus:outline-none focus:border-purple-500">
+            <button type="submit" id="articleChatSubmitBtn" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-1 shrink-0 transition">
+              <span>Poser</span>
+              <i class="fa-solid fa-paper-plane text-[10px]"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Reader Footer -->
+      <div class="pt-4 mt-4 border-t border-slate-800 flex items-center justify-between text-xs">
+        <button id="readerFavBtn" onclick="toggleReaderFavorite()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 font-medium flex items-center gap-2 border border-slate-700">
+          <i class="fa-solid fa-star"></i>
+          <span id="readerFavText">Favori</span>
+        </button>
+        <button onclick="closeReaderModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-5 py-2 rounded-xl shadow-lg shadow-indigo-600/30">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Article Notes & Edit -->
+  <div id="notesModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl p-6 relative">
+      <button onclick="closeNotesModal()" class="absolute right-4 top-4 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <h3 id="notesModalTitle" class="text-base font-bold text-white mb-1">Éditer la veille</h3>
+      <p id="notesModalUrl" class="text-xs text-indigo-400 truncate mb-4"></p>
+
+      <input type="hidden" id="editArticleId">
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Catégorie</label>
+          <select id="editCategory" class="w-full bg-slate-950 text-sm text-slate-100 p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-indigo-500">
+            <option value="Tech & IA">Tech & IA</option>
+            <option value="LinkedIn">LinkedIn</option>
+            <option value="Dev & Tech">Dev & Tech</option>
+            <option value="Business & SaaS">Business & SaaS</option>
+            <option value="Design & UX">Design & UX</option>
+            <option value="Sécurité">Sécurité</option>
+            <option value="Général">Général</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Notes personnelles & Mots-clés</label>
+          <textarea id="editNotes" rows="4" placeholder="Ajoutez vos réflexions, cas d'usage, idées de projet..." class="w-full bg-slate-950 text-sm text-slate-100 p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-indigo-500"></textarea>
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-2">
+          <button type="button" onclick="closeNotesModal()" class="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white">Annuler</button>
+          <button type="button" onclick="saveNotes()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30">
+            Sauvegarder
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Application Logic -->
+  <script>
+    let currentCategory = 'Tous';
+    let onlyFavorites = false;
+    let articlesData = [];
+    let activeReaderArticleId = null;
+
+    function showAllArticles() {
+      currentCategory = 'Tous';
+      onlyFavorites = false;
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) searchInput.value = '';
+      const filterBadge = document.getElementById('activeFilterBadge');
+      if (filterBadge) filterBadge.innerText = 'Tous les contenus';
+      switchTab('articles');
+    }
+
+    function switchTab(tabName) {
+      const viewArticles = document.getElementById('viewArticles');
+      const viewChatbot = document.getElementById('viewChatbot');
+      const viewNewsletter = document.getElementById('viewNewsletter');
+
+      if (viewArticles) viewArticles.classList.add('hidden');
+      if (viewChatbot) viewChatbot.classList.add('hidden');
+      if (viewNewsletter) viewNewsletter.classList.add('hidden');
+
+      const btnArticles = document.getElementById('tab-btn-articles');
+      const btnChatbot = document.getElementById('tab-btn-chatbot');
+      const btnNewsletter = document.getElementById('tab-btn-newsletter');
+
+      if (btnArticles) btnArticles.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition";
+      if (btnChatbot) btnChatbot.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition";
+      if (btnNewsletter) btnNewsletter.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition";
+
+      if (tabName === 'articles') {
+        if (viewArticles) viewArticles.classList.remove('hidden');
+        if (btnArticles) btnArticles.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between text-indigo-300 bg-indigo-950/70 border border-indigo-800/40 transition";
+        fetchArticles();
+        fetchCategories();
+      } else if (tabName === 'chatbot') {
+        if (viewChatbot) viewChatbot.classList.remove('hidden');
+        if (btnChatbot) btnChatbot.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-purple-300 bg-purple-950/70 border border-purple-800/40 transition";
+      } else if (tabName === 'newsletter') {
+        if (viewNewsletter) viewNewsletter.classList.remove('hidden');
+        if (btnNewsletter) btnNewsletter.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-cyan-300 bg-cyan-950/70 border border-cyan-800/40 transition";
+      }
+    }
+
+    async function submitChatQuery(e) {
+      e.preventDefault();
+      const input = document.getElementById('chatInput');
+      const query = input.value.trim();
+      if (!query) return;
+
+      const chatFeed = document.getElementById('chatMessages');
+      const btn = document.getElementById('chatSubmitBtn');
+
+      chatFeed.innerHTML += `
+        <div class="flex items-start gap-3 p-4 rounded-2xl bg-indigo-950/40 border border-indigo-800/40 text-sm justify-end">
+          <div class="space-y-1 text-right">
+            <span class="font-bold text-xs text-indigo-300">Vous</span>
+            <p class="text-slate-200 text-xs">${escapeHtml(query)}</p>
+          </div>
+        </div>
+      `;
+
+      input.value = '';
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Analyse...`;
+      chatFeed.scrollTop = chatFeed.scrollHeight;
+
+      try {
+        const res = await fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ query })
+        });
+        const data = await res.json();
+
+        let sourcesHTML = '';
+        if (data.sources && data.sources.length > 0) {
+          sourcesHTML = `
+            <div class="mt-3 pt-2 border-t border-purple-900/40 text-[11px] text-purple-300 space-y-1">
+              <span class="font-semibold block">Sources citées :</span>
+              ${data.sources.map(s => `
+                <div class="truncate">• ${escapeHtml(s.title)} ${s.author ? `(par ${escapeHtml(s.author)})` : ''}</div>
+              `).join('')}
+            </div>
+          `;
+        }
+
+        chatFeed.innerHTML += `
+          <div class="flex items-start gap-3 p-4 rounded-2xl bg-slate-900 border border-purple-900/40 text-sm">
+            <div class="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-brain"></i>
+            </div>
+            <div class="space-y-1.5 flex-1">
+              <span class="font-bold text-xs text-purple-300">Synapse AI Assistant</span>
+              <div class="text-slate-200 text-xs leading-relaxed whitespace-pre-wrap">${escapeHtml(data.answer)}</div>
+              ${sourcesHTML}
+            </div>
+          </div>
+        `;
+
+      } catch (err) {
+        chatFeed.innerHTML += `
+          <div class="p-3 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-300 text-xs">
+            Erreur lors de la réponse IA. Vérifiez que le serveur est bien démarré.
+          </div>
+        `;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Envoyer</span> <i class="fa-solid fa-paper-plane"></i>`;
+        chatFeed.scrollTop = chatFeed.scrollHeight;
+      }
+    }
+
+    async function generateNewsletter() {
+      const container = document.getElementById('newsletterContainer');
+      const btn = document.getElementById('genNewsletterBtn');
+
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Génération...`;
+      container.innerHTML = `
+        <div class="text-center py-12">
+          <i class="fa-solid fa-wand-magic-sparkles text-4xl text-cyan-400 animate-pulse mb-3"></i>
+          <h3 class="text-base font-bold text-white mb-1">Génération de la Newsletter par Gemini 2.5...</h3>
+          <p class="text-xs text-slate-400">Synthèse et structuration des posts de la semaine en cours...</p>
+        </div>
+      `;
+
+      try {
+        const res = await fetch('/api/ai/newsletter', { method: 'POST' });
+        const data = await res.json();
+
+        container.innerHTML = `
+          <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+            <span class="text-xs font-semibold text-cyan-400">Newsletter basée sur ${data.articles_count} article(s)</span>
+            <button onclick="navigator.clipboard.writeText(document.getElementById('newsletterMarkdown').innerText); alert('Copié dans le presse-papier !');" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5">
+              <i class="fa-solid fa-copy text-cyan-400"></i> Copier en Markdown
+            </button>
+          </div>
+          <div id="newsletterMarkdown" class="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap selection:bg-cyan-500 selection:text-white pt-2">
+${escapeHtml(data.newsletter_markdown)}
+          </div>
+        `;
+
+      } catch (err) {
+        container.innerHTML = `
+          <div class="p-4 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-300 text-xs">
+            Erreur lors de la génération de la newsletter.
+          </div>
+        `;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Générer Newsletter (7 derniers jours)`;
+      }
+    }
+
+    async function enrichArticleWithAI(id) {
+      const btn = document.getElementById(`enrichBtn-${id}`);
+      if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin text-[10px]"></i> IA...`;
+
+      try {
+        const res = await fetch(`/api/ai/enrich/${id}`, { method: 'POST' });
+        if (res.ok) {
+          await fetchArticles();
+        }
+      } catch (err) {
+        console.error('Erreur enrichissement IA:', err);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchArticles();
+      fetchCategories();
+      fetchStats();
+
+      const searchInput = document.getElementById('searchInput');
+      const clearBtn = document.getElementById('clearSearchBtn');
+      
+      let searchTimeout;
+      searchInput.addEventListener('input', (e) => {
+        const val = e.target.value;
+        if (val) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          fetchArticles();
+        }, 300);
+      });
+
+      clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        clearBtn.classList.add('hidden');
+        fetchArticles();
+      });
+    });
+
+    async function fetchStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        document.getElementById('statTotal').innerText = data.total || 0;
+        document.getElementById('statFavorites').innerText = data.favorites || 0;
+        document.getElementById('count-all').innerText = data.total || 0;
+      } catch (err) {
+        console.error('Erreur chargement stats:', err);
+      }
+    }
+
+    async function fetchCategories() {
+      try {
+        const res = await fetch('/api/categories');
+        const categories = await res.json();
+        
+        const container = document.getElementById('categoriesList');
+        if (!categories || categories.length === 0) {
+          container.innerHTML = `<div class="text-xs text-slate-500 px-3 py-1">Aucune catégorie</div>`;
+          return;
+        }
+
+        container.innerHTML = categories.map(cat => {
+          const isActive = currentCategory === cat.category;
+          return `
+            <button onclick="filterCategory('${cat.category}')" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition ${
+              isActive 
+                ? 'bg-indigo-950/70 text-indigo-300 border border-indigo-800/40' 
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+            }">
+              <span class="truncate flex items-center gap-2">
+                <i class="fa-solid fa-folder text-indigo-400/80 text-[10px]"></i>
+                <span class="truncate">${cat.category}</span>
+              </span>
+              <span class="text-[10px] bg-slate-800/80 text-slate-400 px-1.5 py-0.5 rounded font-mono">${cat.count}</span>
+            </button>
+          `;
+        }).join('');
+
+      } catch (err) {
+        console.error('Erreur chargement catégories:', err);
+      }
+    }
+
+    async function fetchArticles() {
+      const search = document.getElementById('searchInput').value.trim();
+      let url = '/api/articles?';
+      const params = new URLSearchParams();
+
+      if (currentCategory !== 'Tous') {
+        params.append('category', currentCategory);
+      }
+      if (onlyFavorites) {
+        params.append('favorite', 'true');
+      }
+      if (search) {
+        params.append('search', search);
+      }
+
+      url += params.toString();
+
+      try {
+        const res = await fetch(url);
+        articlesData = await res.json();
+        renderArticles(articlesData);
+        document.getElementById('resultsCount').innerText = `${articlesData.length} article(s)`;
+      } catch (err) {
+        console.error('Erreur chargement articles:', err);
+      }
+    }
+
+    function renderArticles(articles) {
+      const grid = document.getElementById('articlesGrid');
+      const emptyState = document.getElementById('emptyState');
+
+      if (!articles || articles.length === 0) {
+        grid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        emptyState.classList.add('flex');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      emptyState.classList.remove('flex');
+
+      grid.innerHTML = articles.map(art => {
+        const dateStr = new Date(art.created_at).toLocaleDateString('fr-FR', {
+          day: 'numeric', month: 'short', year: 'numeric'
+        });
+
+        const isFav = art.is_favorite === 1;
+        const site = art.site_name || 'Article';
+        const hasValidUrl = art.url && art.url !== 'null' && art.url !== 'undefined' && String(art.url).startsWith('http');
+        const isLinkedIn = site.toLowerCase().includes('linkedin') || (hasValidUrl && art.url.includes('linkedin.com'));
+
+        return `
+          <div class="glass rounded-2xl p-5 flex flex-col justify-between hover:border-slate-700 transition duration-200 group relative">
+            <div>
+              <!-- Top Row: Badge & Date & Fav -->
+              <div class="flex items-center justify-between mb-3 text-xs">
+                <div class="flex items-center space-x-2">
+                  <span class="px-2.5 py-1 rounded-md text-[11px] font-semibold ${
+                    isLinkedIn ? 'bg-blue-950 text-blue-300 border border-blue-800/40' : 'bg-slate-800 text-indigo-300 border border-slate-700'
+                  }">
+                    ${isLinkedIn ? '<i class="fa-brands fa-linkedin text-blue-400 mr-1"></i>' : ''}${site}
+                  </span>
+                  <span class="bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded text-[10px] font-medium border border-indigo-800/30">
+                    ${art.category}
+                  </span>
+                </div>
+
+                <div class="flex items-center space-x-1.5">
+                  <button onclick="toggleFavorite(${art.id}, ${!isFav})" title="${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}" class="text-sm transition ${isFav ? 'text-amber-400' : 'text-slate-600 hover:text-amber-400'}">
+                    <i class="fa-solid fa-star"></i>
+                  </button>
+                  <button onclick="deleteArticle(${art.id})" title="Supprimer" class="text-slate-600 hover:text-rose-400 text-xs p-1">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Author name if available -->
+              ${art.author ? `
+                <div class="text-xs font-semibold text-indigo-300/90 mb-1.5 flex items-center gap-1.5">
+                  <i class="fa-solid fa-user-pen text-[10px] text-indigo-400"></i>
+                  <span>${escapeHtml(art.author)}</span>
+                </div>
+              ` : ''}
+
+              <!-- Title (Click opens Reader Modal) -->
+              <h3 class="font-bold text-slate-100 text-sm leading-snug mb-2 group-hover:text-indigo-300 transition line-clamp-2 cursor-pointer" onclick="openReaderModal(${art.id})">
+                <span>${escapeHtml(art.title)}</span>
+              </h3>
+
+              <!-- Summary (Click opens Reader Modal) -->
+              ${art.summary ? `
+                <p class="text-slate-400 text-xs leading-relaxed mb-3 line-clamp-4 cursor-pointer hover:text-slate-200 transition" onclick="openReaderModal(${art.id})">${escapeHtml(art.summary)}</p>
+              ` : ''}
+
+              <!-- Personal Notes -->
+              ${art.notes ? `
+                <div class="mt-2 p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 text-xs text-indigo-200/90 flex items-start space-x-2">
+                  <i class="fa-solid fa-note-sticky text-indigo-400 text-xs mt-0.5 shrink-0"></i>
+                  <p class="italic text-[11px] line-clamp-2">${escapeHtml(art.notes)}</p>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Footer Row -->
+            <div class="pt-4 mt-4 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500">
+              <div class="flex items-center space-x-2">
+                <button onclick="openReaderModal(${art.id}, 'full')" class="text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 font-semibold transition bg-indigo-950/40 px-2.5 py-1 rounded-md border border-indigo-800/30">
+                  <i class="fa-solid fa-book-open text-xs"></i> Lire
+                </button>
+                <button onclick="openReaderModal(${art.id}, 'summary')" class="text-purple-400 hover:text-purple-300 flex items-center gap-1.5 font-semibold transition bg-purple-950/40 px-2.5 py-1 rounded-md border border-purple-800/30">
+                  <i class="fa-solid fa-wand-magic-sparkles text-xs"></i> Résumé IA
+                </button>
+              </div>
+              <div class="flex items-center space-x-3">
+                <span>${dateStr}</span>
+                <button onclick="openNotesModal(${art.id})" class="text-slate-400 hover:text-indigo-300 flex items-center gap-1 font-medium transition">
+                  <i class="fa-solid fa-pen text-[10px]"></i> Note
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    let currentReaderArticle = null;
+
+    function openReaderModal(id, initialMode = 'full') {
+      const art = articlesData.find(a => a.id === id);
+      if (!art) return;
+
+      currentReaderArticle = art;
+      activeReaderArticleId = id;
+
+      document.getElementById('readerTitle').innerText = art.title || 'Sans titre';
+      document.getElementById('readerCategoryBadge').innerText = art.category || 'Général';
+      document.getElementById('readerSiteBadge').innerText = art.site_name || 'Lien';
+
+      const dateStr = new Date(art.created_at).toLocaleDateString('fr-FR', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      });
+      document.getElementById('readerDate').innerText = dateStr;
+
+      const authorEl = document.getElementById('readerAuthor');
+      if (art.author) {
+        authorEl.innerHTML = `<i class="fa-solid fa-user-pen text-indigo-400"></i> Par ${escapeHtml(art.author)}`;
+        authorEl.classList.remove('hidden');
+      } else {
+        authorEl.innerHTML = '';
+        authorEl.classList.add('hidden');
+      }
+
+      const srcBtn = document.getElementById('readerSourceBtn');
+      const hasUrl = art.url && art.url !== 'null' && String(art.url).startsWith('http');
+      if (hasUrl) {
+        srcBtn.href = art.url;
+        srcBtn.classList.remove('hidden');
+      } else {
+        srcBtn.classList.add('hidden');
+      }
+
+      const notesContainer = document.getElementById('readerNotesContainer');
+      const notesEl = document.getElementById('readerNotes');
+      if (art.notes) {
+        notesEl.innerText = art.notes;
+        notesContainer.classList.remove('hidden');
+      } else {
+        notesContainer.classList.add('hidden');
+      }
+
+      const favBtnText = document.getElementById('readerFavText');
+      favBtnText.innerText = art.is_favorite === 1 ? 'Favori ★' : 'Ajouter aux favoris';
+
+      setReaderMode(initialMode);
+
+      document.getElementById('readerModal').classList.remove('hidden');
+    }
+
+    function formatMarkdownBold(text) {
+      if (!text) return '';
+      return text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-300 font-bold">$1</strong>');
+    }
+
+    function formatBullets(summaryText) {
+      if (!summaryText) return '';
+      let escaped = escapeHtml(summaryText);
+      let bolded = escaped.replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-300 font-bold">$1</strong>');
+      const lines = bolded.split(/\n+/);
+      const items = lines.map(line => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+          return `<div class="mb-3.5 pl-3 border-l-2 border-purple-800/60 leading-relaxed text-slate-200 text-xs md:text-sm">${trimmed}</div>`;
+        }
+        return `<div class="mb-2 leading-relaxed text-slate-200 text-xs md:text-sm">${trimmed}</div>`;
+      });
+      return items.join('');
+    }
+
+    function setReaderMode(mode) {
+      if (!currentReaderArticle) return;
+
+      const btnFull = document.getElementById('readerTabFull');
+      const btnSummary = document.getElementById('readerTabSummary');
+      const bodyEl = document.getElementById('readerBody');
+
+      if (mode === 'full') {
+        btnFull.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition bg-indigo-950 text-indigo-300 border border-indigo-800/40";
+        btnSummary.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition text-slate-400 hover:text-white";
+
+        const fullText = (currentReaderArticle.content && currentReaderArticle.content.trim().length > 30) 
+          ? currentReaderArticle.content 
+          : (currentReaderArticle.summary || 'Aucun contenu texte disponible.');
+        bodyEl.innerText = fullText;
+      } else {
+        btnSummary.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition bg-purple-950 text-purple-300 border border-purple-800/40";
+        btnFull.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition text-slate-400 hover:text-white";
+
+        const summaryText = (currentReaderArticle.summary || '').trim();
+        const isStructuredAiSummary = summaryText.length > 200 || summaryText.includes('•') || summaryText.includes('-');
+
+        if (isStructuredAiSummary) {
+          bodyEl.innerHTML = `
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-3 rounded-xl bg-purple-950/40 border border-purple-800/40 text-xs">
+                <span class="font-bold text-purple-300 flex items-center gap-2">
+                  <i class="fa-solid fa-brain text-purple-400"></i>
+                  Synthèse Structurée Gemini 2.5
+                </span>
+                <button onclick="triggerAiEnrichmentInModal(${currentReaderArticle.id})" id="modalAiGenBtn" class="text-purple-300 hover:text-white text-[11px] font-semibold bg-purple-900/60 hover:bg-purple-800/80 px-2.5 py-1 rounded-lg border border-purple-700/50 transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-arrows-rotate"></i> Régénérer
+                </button>
+              </div>
+              <div class="pt-1">
+                ${formatBullets(summaryText)}
+              </div>
+            </div>
+          `;
+        } else {
+          // Auto-trigger live generation on the fly!
+          bodyEl.innerHTML = `
+            <div class="text-center py-10 space-y-3 bg-slate-950/60 rounded-2xl border border-purple-900/40 p-6">
+              <i class="fa-solid fa-wand-magic-sparkles text-4xl text-purple-400 animate-pulse mb-1"></i>
+              <h4 class="text-sm font-bold text-white">Génération de la Synthèse IA en cours...</h4>
+              <p class="text-xs text-slate-400">Gemini 2.5 analyse le contenu complet et extrait les 3 à 5 enseignements clés...</p>
+            </div>
+          `;
+          triggerAiEnrichmentInModal(currentReaderArticle.id);
+        }
+      }
+    }
+
+    function renderMarkdown(rawText) {
+      if (!rawText) return '';
+
+      let text = escapeHtml(rawText.trim());
+
+      // Replace bold **word** or __word__
+      text = text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-300 font-bold">$1</strong>');
+      text = text.replace(/__(.*?)__/g, '<strong class="text-purple-300 font-bold">$1</strong>');
+
+      // Replace italic *word*
+      text = text.replace(/\*(.*?)\*/g, '<em class="italic text-slate-300">$1</em>');
+
+      // Process line by line
+      const lines = text.split('\n');
+      const htmlLines = lines.map(line => {
+        let trimmed = line.trim();
+        if (!trimmed) return '';
+
+        // Strip heading markers ### or ## or #
+        if (trimmed.startsWith('#')) {
+          trimmed = trimmed.replace(/^#{1,6}\s*/, '');
+          return `<div class="font-bold text-indigo-300 text-xs mt-2 mb-1">${trimmed}</div>`;
+        }
+
+        // Strip bullet symbols (•, -, *, 1., 2.) and render as custom flex bullet row
+        if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*') || /^\d+\.\s/.test(trimmed)) {
+          const content = trimmed.replace(/^([•\-\*]|\d+\.)\s*/, '');
+          return `
+            <div class="flex items-start gap-2 my-1 text-slate-200">
+              <span class="text-purple-400 font-bold shrink-0">•</span>
+              <span class="leading-relaxed">${content}</span>
+            </div>
+          `;
+        }
+
+        return `<div class="my-1 leading-relaxed text-slate-200">${trimmed}</div>`;
+      });
+
+      return htmlLines.filter(Boolean).join('');
+    }
+
+    async function submitArticleChat(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('articleChatInput');
+      const query = input.value.trim();
+      if (!query || !currentReaderArticle) return;
+
+      const thread = document.getElementById('articleChatThread');
+      const btn = document.getElementById('articleChatSubmitBtn');
+
+      thread.innerHTML += `
+        <div class="p-2.5 rounded-xl bg-indigo-950/50 border border-indigo-800/40 text-xs text-right text-indigo-200 font-medium">
+          ${escapeHtml(query)}
+        </div>
+      `;
+
+      input.value = '';
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i>`;
+      thread.scrollTop = thread.scrollHeight;
+
+      try {
+        const res = await fetch('/api/ai/article-chat', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ article_id: currentReaderArticle.id, query })
+        });
+        const data = await res.json();
+
+        const webBadge = data.used_web_search 
+          ? `<span class="inline-flex items-center gap-1 text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800/40 px-1.5 py-0.5 rounded ml-2">🌐 Recherche Web</span>` 
+          : '';
+
+        thread.innerHTML += `
+          <div class="p-3 rounded-xl bg-slate-950 border border-purple-900/40 text-xs text-slate-200 leading-relaxed">
+            <div class="font-bold text-purple-300 flex items-center justify-between text-[11px] mb-1">
+              <span>Assistant Synapse</span>
+              ${webBadge}
+            </div>
+            <div>${renderMarkdown(data.answer)}</div>
+          </div>
+        `;
+      } catch (err) {
+        thread.innerHTML += `<div class="p-2 text-rose-400 text-xs">Erreur de réponse IA.</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Poser</span> <i class="fa-solid fa-paper-plane text-[10px]"></i>`;
+        thread.scrollTop = thread.scrollHeight;
+      }
+    }
+
+    function sendQuickArticleQuestion(text) {
+      document.getElementById('articleChatInput').value = text;
+      submitArticleChat();
+    }
+
+    async function triggerAiEnrichmentInModal(id) {
+      const btn = document.getElementById('modalAiGenBtn');
+      if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Génération Gemini...`;
+
+      try {
+        const res = await fetch('/api/ai/enrich/' + id, { method: 'POST' });
+        if (res.ok) {
+          const updatedArt = await res.json();
+          currentReaderArticle = updatedArt;
+          await fetchArticles();
+          setReaderMode('summary');
+        }
+      } catch (err) {
+        console.error('Erreur enrichissement IA:', err);
+      }
+    }
+
+    function closeReaderModal() {
+      document.getElementById('readerModal').classList.add('hidden');
+    }
+
+    async function toggleReaderFavorite() {
+      if (!activeReaderArticleId) return;
+      const art = articlesData.find(a => a.id === activeReaderArticleId);
+      if (!art) return;
+
+      const targetFav = art.is_favorite !== 1;
+      await toggleFavorite(activeReaderArticleId, targetFav);
+      
+      const favBtnText = document.getElementById('readerFavText');
+      favBtnText.innerText = targetFav ? 'Favori ★' : 'Ajouter aux favoris';
+    }
+
+    function filterCategory(category) {
+      currentCategory = category;
+      onlyFavorites = false;
+      document.getElementById('activeFilterBadge').innerText = category;
+      fetchArticles();
+      fetchCategories();
+    }
+
+    function toggleFavoritesFilter() {
+      onlyFavorites = !onlyFavorites;
+      document.getElementById('activeFilterBadge').innerText = onlyFavorites ? 'Favoris ★' : currentCategory;
+      fetchArticles();
+    }
+
+    async function toggleFavorite(id, targetFav) {
+      try {
+        await fetch(`/api/articles/${id}`, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ is_favorite: targetFav })
+        });
+        fetchArticles();
+        fetchStats();
+      } catch (err) {
+        console.error('Erreur mise à jour favori:', err);
+      }
+    }
+
+    async function deleteArticle(id) {
+      if (!confirm('Voulez-vous vraiment supprimer ce lien de votre veille ?')) return;
+      try {
+        await fetch(`/api/articles/${id}`, { method: 'DELETE' });
+        fetchArticles();
+        fetchCategories();
+        fetchStats();
+      } catch (err) {
+        console.error('Erreur suppression:', err);
+      }
+    }
+
+    function openAddModal() {
+      document.getElementById('addModal').classList.remove('hidden');
+    }
+
+    function closeAddModal() {
+      document.getElementById('addModal').classList.add('hidden');
+      document.getElementById('addForm').reset();
+    }
+
+    async function extractFromUrl() {
+      const url = document.getElementById('addUrl').value.trim();
+      if (!url) {
+        alert('Veuillez entrer une URL valide.');
+        return;
+      }
+
+      const btn = document.getElementById('extractBtn');
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Extraction...`;
+
+      try {
+        const res = await fetch('/api/extract', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        
+        if (data.title) document.getElementById('addTitle').value = data.title;
+        if (data.summary) document.getElementById('addSummary').value = data.summary;
+        if (data.site_name) document.getElementById('addSiteName').value = data.site_name;
+        if (data.category) document.getElementById('addCategory').value = data.category;
+
+      } catch (err) {
+        console.error('Extraction error:', err);
+      } finally {
+        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> Auto-extraire`;
+      }
+    }
+
+    async function submitAddForm(e) {
+      e.preventDefault();
+      const payload = {
+        url: document.getElementById('addUrl').value.trim(),
+        title: document.getElementById('addTitle').value.trim(),
+        category: document.getElementById('addCategory').value,
+        site_name: document.getElementById('addSiteName').value.trim(),
+        summary: document.getElementById('addSummary').value.trim(),
+        notes: document.getElementById('addNotes').value.trim()
+      };
+
+      try {
+        const res = await fetch('/api/articles', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          closeAddModal();
+          fetchArticles();
+          fetchCategories();
+          fetchStats();
+        }
+      } catch (err) {
+        console.error('Erreur sauvegarde:', err);
+      }
+    }
+
+    function openNotesModal(id) {
+      const art = articlesData.find(a => a.id === id);
+      if (!art) return;
+
+      document.getElementById('editArticleId').value = id;
+      document.getElementById('notesModalTitle').innerText = art.title || 'Note';
+      document.getElementById('notesModalUrl').innerText = art.url || '';
+      document.getElementById('editCategory').value = art.category || 'Tech & IA';
+      document.getElementById('editNotes').value = art.notes || '';
+      document.getElementById('notesModal').classList.remove('hidden');
+    }
+
+    function closeNotesModal() {
+      document.getElementById('notesModal').classList.add('hidden');
+    }
+
+    async function saveNotes() {
+      const id = document.getElementById('editArticleId').value;
+      const category = document.getElementById('editCategory').value;
+      const notes = document.getElementById('editNotes').value.trim();
+
+      try {
+        await fetch(`/api/articles/${id}`, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ category, notes })
+        });
+        closeNotesModal();
+        fetchArticles();
+        fetchCategories();
+      } catch (err) {
+        console.error('Erreur enregistrement note:', err);
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
