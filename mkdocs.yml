@@ -54,5 +54,3 @@ nav:
   - 🖥️ Dashboard & IA: dashboard.md
   - 📐 Architecture: architecture.md
   - 📄 API Reference (Swagger): api-reference.md
-  - 🧠 Apprentissages Techniques:
-      - Collisions Message Listeners MV3: solutions/integration-issues/chrome-extension-mv3-content-script-listener-collisions.md
