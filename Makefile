@@ -1,6 +1,7 @@
 .PHONY: install sync dev run test lint format precommit clean
 
 UV = /Users/lucas.heral/.local/bin/uv
+VENV_BIN = $(CURDIR)/.venv/bin
 
 # Default target
 all: install
@@ -9,6 +10,7 @@ all: install
 install:
 	$(UV) venv --clear
 	$(UV) sync
+	$(VENV_BIN)/pre-commit install
 
 # Sync virtual environment
 sync:
@@ -16,25 +18,25 @@ sync:
 
 # Run backend development server
 dev:
-	cd backend && $(UV) run uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+	cd backend && $(VENV_BIN)/uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 
 run: dev
 
 # Setup pre-commit hooks
 precommit:
-	$(UV) run pre-commit install
+	$(VENV_BIN)/pre-commit install
 
 # Lint code with ruff
 lint:
-	$(UV) run ruff check .
+	$(VENV_BIN)/ruff check .
 
 # Format code with ruff
 format:
-	$(UV) run ruff format .
+	$(VENV_BIN)/ruff format .
 
 # Run tests
 test:
-	$(UV) run python test_google_genai.py
+	$(VENV_BIN)/python test_google_genai.py
 
 # Clean cache & virtualenv
 clean:
