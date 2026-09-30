@@ -48,7 +48,14 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="SYNAPSE API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="SYNAPSE API",
+    description="API REST officielle de SYNAPSE - Hub de Veille Technologique & IA avec Google Vertex AI Gemini 3.8 Flash & Extension Chrome V3",
+    version="0.1.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    lifespan=lifespan,
+)
 
 # Enable CORS for Chrome Extension & local development
 app.add_middleware(
