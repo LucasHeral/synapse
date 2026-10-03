@@ -38,14 +38,16 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_category ON articles(category)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_created_at ON articles(created_at)")
 
-    # Create sentiment_reports table
+    # Create sentiment_reports table (time-series snapshots)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS sentiment_reports (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            entity TEXT UNIQUE NOT NULL,
+            entity TEXT NOT NULL,
             sentiment_score INTEGER NOT NULL,
             sentiment_label TEXT NOT NULL,
             summary TEXT NOT NULL,
+            news_and_trends TEXT DEFAULT '',
+            evolution_note TEXT DEFAULT '',
             pros_json TEXT NOT NULL,
             cons_json TEXT NOT NULL,
             sources_json TEXT NOT NULL,
@@ -53,7 +55,7 @@ def init_db():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_entity ON sentiment_reports(entity)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_entity_date ON sentiment_reports(entity, created_at)")
 
     conn.commit()
     conn.close()

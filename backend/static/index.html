@@ -1,10 +1,13 @@
 <!DOCTYPE html>
-<html lang="fr" class="dark">
+<html lang="fr" class="dark" style="color-scheme: dark;">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1120">
   <title>SYNAPSE</title>
   <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -23,10 +26,10 @@
               cyan: '#06b6d4',
             },
             dark: {
-              bg: '#0f172a',
-              card: '#1e293b',
-              sidebar: '#0b1120',
-              border: '#334155'
+              bg: '#050506',
+              card: '#0e0f12',
+              sidebar: '#0b0c0e',
+              border: '#1e2128'
             }
           }
         }
@@ -35,85 +38,290 @@
   </script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --canvas-bg: #0b1120;
+      --panel-bg: #0f172a;
+      --surface-elevated: #141f36;
+      --card-inner: #131c33;
+      --card-hover: #192644;
+      --border-outer: rgba(99, 102, 241, 0.18);
+      --border-inner: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(129, 140, 248, 0.4);
+      --text-hero: #ffffff;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #718096;
+      --accent-indigo: #6366f1;
+      --accent-violet: #8b5cf6;
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+      --accent-amber: #f59e0b;
+    }
+
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background-color: #0b0f19;
-      color: #f1f5f9;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background-color: var(--canvas-bg);
+      color: var(--text-primary);
+      letter-spacing: -0.015em;
+      position: relative;
     }
-    .glass {
-      background: rgba(30, 41, 59, 0.7);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+
+    button, a, input, select, textarea {
+      touch-action: manipulation;
     }
-    .glass-sidebar {
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(16px);
-      border-right: 1px solid rgba(255, 255, 255, 0.06);
+
+    h1, h2, h3 {
+      text-wrap: balance;
     }
-    .glow-accent {
-      box-shadow: 0 0 20px -3px rgba(99, 102, 241, 0.35);
+
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
     }
-    .gradient-text {
-      background: linear-gradient(135deg, #a855f7, #6366f1, #06b6d4);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+
+    /* Ambient Atmospheric Glows */
+    .ambient-glow-top {
+      position: fixed;
+      top: -140px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 960px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, rgba(139, 92, 246, 0.12) 40%, rgba(6, 182, 212, 0.05) 65%, transparent 75%);
+      filter: blur(95px);
+      pointer-events: none;
+      z-index: 0;
     }
+
+    .ambient-glow-center {
+      position: fixed;
+      top: 35%;
+      left: 20%;
+      width: 750px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, rgba(6, 182, 212, 0.05) 45%, transparent 70%);
+      filter: blur(105px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .ambient-glow-bottom {
+      position: fixed;
+      bottom: -150px;
+      right: 5%;
+      width: 650px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, rgba(6, 182, 212, 0.06) 50%, transparent 70%);
+      filter: blur(95px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* The "Double-Bezel" (Doppelrand) Hardware Card Architecture */
+    .double-bezel-card {
+      background: linear-gradient(145deg, rgba(99, 102, 241, 0.08) 0%, rgba(19, 28, 51, 0.7) 40%, rgba(12, 18, 33, 0.95) 100%);
+      border: 1px solid var(--border-outer);
+      padding: 5px;
+      border-radius: 1.25rem; /* 20px */
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+    }
+
+    .double-bezel-card:hover {
+      background: linear-gradient(145deg, rgba(99, 102, 241, 0.14) 0%, rgba(25, 38, 68, 0.8) 40%, rgba(15, 23, 42, 0.98) 100%);
+      border-color: rgba(99, 102, 241, 0.45);
+      transform: translateY(-2px);
+      box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.65), 0 0 28px -4px rgba(99, 102, 241, 0.28);
+    }
+
+    .double-bezel-inner {
+      background: var(--card-inner);
+      border: 1px solid var(--border-inner);
+      border-radius: calc(1.25rem - 5px); /* 15px concentric radius */
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+      padding: 1.25rem;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .glass-panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-inner);
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.06);
+    }
+
+    /* Tactile Hardware Buttons */
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #4f46e5 100%);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+      color: #ffffff;
+      font-weight: 600;
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #7175f5 0%, #9a6df7 50%, #5850ee 100%);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.45);
+      transform: translateY(-1px);
+    }
+    .btn-primary:active {
+      transform: scale(0.98);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-action-primary {
+      background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+      color: #ffffff;
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-action-primary:hover {
+      background: linear-gradient(180deg, #7175f5 0%, #5850ee 100%);
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+      transform: translateY(-0.5px);
+    }
+
+    .btn-action-primary:active {
+      transform: scale(0.98);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    .btn-action-ghost {
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      color: var(--text-secondary);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-action-ghost:hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(255, 255, 255, 0.14);
+      color: #ffffff;
+      transform: translateY(-0.5px);
+    }
+
+    .btn-action-ghost:active {
+      transform: scale(0.98);
+    }
+
+    /* Micro-Specular Highlight */
+    .specular-border {
+      position: relative;
+    }
+    .specular-border::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 15%;
+      right: 15%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+      pointer-events: none;
+    }
+
     ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
     }
     ::-webkit-scrollbar-track {
-      background: #0f172a;
+      background: #050506;
     }
     ::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 9999px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #6366f1;
+      background: rgba(255, 255, 255, 0.25);
     }
   </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden text-slate-200">
+  <div class="ambient-glow-top"></div>
+  <div class="ambient-glow-center"></div>
+  <div class="ambient-glow-bottom"></div>
 
   <!-- Top Navigation Bar -->
-  <header class="h-16 glass z-20 px-6 flex items-center justify-between border-b border-slate-800">
-    <div class="flex items-center space-x-3">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-        <i class="fa-solid fa-brain text-white text-lg"></i>
+  <header class="h-14 z-20 px-5 flex items-center justify-between border-b border-indigo-500/20 bg-[#0c1222]/85 backdrop-blur-xl relative shadow-sm">
+    <div class="flex items-center space-x-3.5">
+      <!-- Jewel Logo Mark -->
+      <div class="relative group cursor-pointer" onclick="showAllArticles()">
+        <div class="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 rounded-xl blur-[5px] opacity-75 group-hover:opacity-100 transition duration-300"></div>
+        <div class="relative w-9 h-9 rounded-xl bg-gradient-to-br from-[#1e1b4b] via-[#0f172a] to-[#082f49] border border-white/30 flex items-center justify-center shadow-lg shadow-indigo-950/60">
+          <svg class="w-5 h-5 text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="url(#logo-grad-1)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 17L12 22L22 17" stroke="url(#logo-grad-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 12L12 17L22 12" stroke="url(#logo-grad-1)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="2.5" fill="#38bdf8" />
+            <defs>
+              <linearGradient id="logo-grad-1" x1="2" y1="2" x2="22" y2="17" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#818cf8"/>
+                <stop offset="0.5" stop-color="#c084fc"/>
+                <stop offset="1" stop-color="#38bdf8"/>
+              </linearGradient>
+              <linearGradient id="logo-grad-2" x1="2" y1="17" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#38bdf8"/>
+                <stop offset="1" stop-color="#818cf8"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
       </div>
-      <div>
-        <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-          SYNAPSE <span class="gradient-text font-black text-xs px-2 py-0.5 rounded-md bg-indigo-950/80 border border-indigo-500/30">HUB</span>
-        </h1>
+
+      <!-- Brand Typography -->
+      <div class="flex items-center gap-2.5">
+        <span class="text-base font-extrabold tracking-wider bg-gradient-to-r from-white via-indigo-100 to-indigo-300 bg-clip-text text-transparent select-none cursor-pointer" onclick="showAllArticles()">
+          SYNAPSE
+        </span>
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-indigo-500/15 text-indigo-300 border border-indigo-400/30 shadow-sm">
+          <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span>v1.2</span>
+        </span>
       </div>
     </div>
 
     <!-- Central Search Bar -->
-    <div class="flex-1 max-w-xl mx-8">
+    <div class="flex-1 max-w-lg mx-6">
       <div class="relative">
-        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs" aria-hidden="true"></i>
         <input
           type="text"
           id="searchInput"
-          placeholder="Rechercher dans la veille (titre, auteur, contenu, notes...)..."
-          class="w-full bg-slate-900/80 text-sm text-slate-100 placeholder-slate-500 pl-10 pr-10 py-2 rounded-xl border border-slate-700/60 focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
+          aria-label="Recherche globale dans la veille"
+          placeholder="Rechercher dans la veille (titre, auteur, contenu, notes&hellip;)&hellip;"
+          class="w-full bg-[#0e162b]/80 text-xs text-slate-100 placeholder-slate-400 pl-9 pr-12 py-1.5 rounded-xl border border-indigo-500/25 focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus:border-indigo-400 focus:outline-none focus:bg-[#121c36] transition-all font-sans shadow-inner"
         >
-        <button id="clearSearchBtn" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-          <i class="fa-solid fa-circle-xmark"></i>
+        <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-indigo-300/80 font-mono px-1.5 py-0.5 rounded-md border border-indigo-500/25 bg-indigo-950/40">⌘&nbsp;K</span>
+        <button id="clearSearchBtn" aria-label="Effacer la recherche" class="hidden absolute right-12 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+          <i class="fa-solid fa-circle-xmark text-xs" aria-hidden="true"></i>
         </button>
       </div>
     </div>
 
     <!-- Actions -->
-    <div class="flex items-center space-x-3">
-      <button onclick="openAddModal()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center space-x-2 transition-all transform active:scale-95">
-        <i class="fa-solid fa-plus"></i>
+    <div class="flex items-center space-x-2">
+      <button onclick="openAddModal()" aria-label="Ajouter un lien à la veille" class="btn-primary text-xs font-semibold px-3.5 py-1.5 rounded-xl flex items-center space-x-1.5 transition">
+        <i class="fa-solid fa-plus text-[10px]" aria-hidden="true"></i>
         <span>Ajouter un lien</span>
       </button>
-      <button onclick="fetchArticles()" title="Actualiser" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition border border-slate-700">
-        <i class="fa-solid fa-arrows-rotate text-sm"></i>
+      <button onclick="fetchArticles()" title="Actualiser" aria-label="Actualiser la liste des veilles" class="btn-action-ghost w-8 h-8 rounded-xl flex items-center justify-center text-xs">
+        <i class="fa-solid fa-arrows-rotate text-slate-300" aria-hidden="true"></i>
       </button>
     </div>
   </header>
@@ -122,45 +330,49 @@
   <div class="flex-1 flex overflow-hidden">
 
     <!-- Left Sidebar -->
-    <aside class="w-64 glass-sidebar p-4 flex flex-col justify-between shrink-0 overflow-y-auto">
+    <aside class="w-64 glass-sidebar p-4 flex flex-col justify-between shrink-0 overflow-y-auto bg-[#0d1324]/80 border-r border-indigo-500/15">
       <div class="space-y-6">
 
-        <!-- Stats Summary -->
-        <div class="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80">
-          <div class="text-center p-2 rounded-lg bg-slate-800/40">
-            <span class="block text-xs text-slate-400 font-medium">Total</span>
-            <span id="statTotal" class="text-lg font-bold text-indigo-400">0</span>
+        <!-- Stats Summary Widget -->
+        <div class="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-indigo-950/20 border border-indigo-500/15">
+          <div class="text-center p-2 rounded-xl bg-gradient-to-br from-indigo-500/10 via-indigo-950/40 to-transparent border border-indigo-500/20 shadow-sm relative overflow-hidden group">
+            <div class="absolute -right-2 -top-2 w-8 h-8 rounded-full bg-indigo-500/15 blur-sm pointer-events-none"></div>
+            <span class="block text-[10.5px] font-semibold text-indigo-300/90 uppercase tracking-wider font-mono">Total</span>
+            <span id="statTotal" class="text-xl font-extrabold text-white font-mono tracking-tight">0</span>
           </div>
-          <div class="text-center p-2 rounded-lg bg-slate-800/40">
-            <span class="block text-xs text-slate-400 font-medium">Favoris</span>
-            <span id="statFavorites" class="text-lg font-bold text-amber-400">0</span>
+          <div class="text-center p-2 rounded-xl bg-gradient-to-br from-amber-500/10 via-amber-950/40 to-transparent border border-amber-500/20 shadow-sm relative overflow-hidden group">
+            <div class="absolute -right-2 -top-2 w-8 h-8 rounded-full bg-amber-500/15 blur-sm pointer-events-none"></div>
+            <span class="block text-[10.5px] font-semibold text-amber-300/90 uppercase tracking-wider font-mono flex items-center justify-center gap-1">
+              <i class="fa-solid fa-star text-[9px] text-amber-400"></i> Favoris
+            </span>
+            <span id="statFavorites" class="text-xl font-extrabold text-amber-300 font-mono tracking-tight">0</span>
           </div>
         </div>
 
         <!-- Main Mode Tabs -->
         <div>
           <h2 class="text-xs uppercase tracking-wider font-semibold text-slate-400 mb-2.5 px-2">Navigation</h2>
-          <nav class="space-y-1">
-            <button onclick="showAllArticles()" id="tab-btn-articles" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between text-indigo-300 bg-indigo-950/70 border border-indigo-800/40 transition">
+          <nav class="space-y-1.5">
+            <button onclick="showAllArticles()" id="tab-btn-articles" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between text-white bg-gradient-to-r from-indigo-600/30 to-purple-600/20 border border-indigo-500/50 shadow-sm transition">
               <span class="flex items-center space-x-2.5">
-                <i class="fa-solid fa-layer-group text-indigo-400"></i>
+                <i class="fa-solid fa-layer-group text-indigo-400 text-sm"></i>
                 <span>Flux de Veille</span>
               </span>
-              <span id="count-all" class="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-bold">0</span>
+              <span id="count-all" class="text-[10px] bg-indigo-950/60 border border-indigo-500/25 text-indigo-300 px-2 py-0.5 rounded-full font-mono font-bold">0</span>
             </button>
 
-            <button onclick="switchTab('chatbot')" id="tab-btn-chatbot" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition">
-              <i class="fa-solid fa-robot text-purple-400"></i>
+            <button onclick="switchTab('chatbot')" id="tab-btn-chatbot" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] transition">
+              <i class="fa-solid fa-robot text-purple-400 text-sm"></i>
               <span>Chatbot</span>
             </button>
 
-            <button onclick="switchTab('newsletter')" id="tab-btn-newsletter" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition">
-              <i class="fa-solid fa-paper-plane text-cyan-400"></i>
+            <button onclick="switchTab('newsletter')" id="tab-btn-newsletter" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] transition">
+              <i class="fa-solid fa-paper-plane text-cyan-400 text-sm"></i>
               <span>Newsletter Hebdo</span>
             </button>
 
-            <button onclick="switchTab('radar')" id="tab-btn-radar" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition">
-              <i class="fa-solid fa-chart-line text-emerald-400"></i>
+            <button onclick="switchTab('radar')" id="tab-btn-radar" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] transition">
+              <i class="fa-solid fa-chart-line text-emerald-400 text-sm"></i>
               <span>Radar & Sentiment</span>
             </button>
           </nav>
@@ -181,42 +393,46 @@
       </div>
 
       <!-- Footer Info -->
-      <div class="pt-4 border-t border-slate-800/80 text-center space-y-2">
-        <a href="/docs" target="_blank" class="inline-flex items-center gap-1.5 text-xs text-indigo-300 hover:text-indigo-200 font-semibold px-2.5 py-1 rounded-lg bg-indigo-950/60 border border-indigo-800/40 transition">
-          <i class="fa-solid fa-code text-indigo-400"></i>
-          <span>Swagger API Docs 📄</span>
-        </a>
-        <p class="text-[11px] text-slate-500">SYNAPSE Base Locale — SQLite Sync</p>
-        <span class="inline-flex items-center gap-1.5 text-[10px] text-emerald-400 font-medium px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/30">
+      <div class="pt-4 border-t border-white/[0.06] text-center space-y-2">
+        <p class="text-[11px] text-slate-500 font-mono">SYNAPSE : Base Locale SQLite</p>
+        <span class="inline-flex items-center gap-1.5 text-[10px] text-emerald-400 font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> App Locale Prête
         </span>
       </div>
     </aside>
 
     <!-- Main Workspace -->
-    <main class="flex-1 flex flex-col overflow-hidden bg-slate-950/50">
+    <main class="flex-1 flex flex-col overflow-hidden bg-[#090d16]">
 
       <!-- View 1: Flux de Veille (Articles Grid) -->
       <div id="viewArticles" class="flex-1 flex flex-col overflow-hidden">
-        <div class="h-12 px-6 flex items-center justify-between border-b border-slate-800/80 bg-slate-900/30 shrink-0">
-          <div class="flex items-center space-x-2 text-xs text-slate-400">
-            <span class="font-medium text-slate-300">Filtre actif :</span>
-            <span id="activeFilterBadge" class="bg-indigo-900/50 text-indigo-300 px-2.5 py-0.5 rounded-md border border-indigo-700/40 font-semibold">Tous</span>
+        <div class="h-12 px-6 flex items-center justify-between border-b border-white/[0.06] bg-[#0d121f]/90 backdrop-blur-md shrink-0">
+          <div class="flex items-center gap-3">
+            <div class="inline-flex items-center p-1 rounded-xl bg-black/40 border border-white/[0.07] text-xs shadow-inner">
+              <button onclick="showAllArticles()" id="filter-pill-all" class="px-3 py-1 rounded-lg font-medium text-xs text-white bg-indigo-600/40 border border-indigo-500/50 shadow-sm transition">
+                <span>Tous</span>
+              </button>
+              <button onclick="filterFavorites()" id="filter-pill-fav" class="px-3 py-1 rounded-lg font-medium text-xs text-slate-400 hover:text-amber-300 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-star text-[10px] text-amber-400/80"></i>
+                <span>Favoris</span>
+              </button>
+            </div>
+            <span id="activeFilterBadge" class="hidden text-xs bg-indigo-500/10 text-indigo-300 px-2.5 py-0.5 rounded-md border border-indigo-500/20 font-medium">Tous</span>
           </div>
-          <div id="resultsCount" class="text-xs text-slate-400 font-medium">0 article(s) trouvé(s)</div>
+          <div id="resultsCount" class="text-xs text-slate-400 font-mono">0 article(s)</div>
         </div>
 
         <div class="flex-1 overflow-y-auto p-6">
-          <div id="articlesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+          <div id="articlesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 
           <!-- Empty State -->
           <div id="emptyState" class="hidden flex-col items-center justify-center py-20 text-center">
-            <div class="w-16 h-16 rounded-2xl bg-slate-800/80 flex items-center justify-center text-slate-500 mb-4 border border-slate-700/50">
-              <i class="fa-solid fa-inbox text-2xl"></i>
+            <div class="w-14 h-14 rounded-xl bg-white/[0.03] flex items-center justify-center text-slate-500 mb-3 border border-white/[0.08]">
+              <i class="fa-solid fa-inbox text-xl"></i>
             </div>
-            <h3 class="text-base font-semibold text-slate-300">Aucune veille enregistrée pour le moment</h3>
-            <p class="text-xs text-slate-500 max-w-sm mt-1 mb-4">Utilisez l'extension Chrome ou le bouton "+" ci-dessus pour ajouter des articles, posts LinkedIn ou pages web.</p>
-            <button onclick="openAddModal()" class="text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-950/80 px-3.5 py-2 rounded-lg border border-indigo-800/50">
+            <h3 class="text-sm font-semibold text-slate-200">Aucune veille enregistrée</h3>
+            <p class="text-xs text-slate-500 max-w-sm mt-1 mb-4">Utilisez l'extension Chrome ou le bouton "+" ci-dessus pour ajouter des articles ou posts.</p>
+            <button onclick="openAddModal()" class="btn-primary text-xs px-3.5 py-1.5 rounded-lg">
               + Ajouter mon premier lien
             </button>
           </div>
@@ -225,23 +441,23 @@
 
       <!-- View 2: Chatbot -->
       <div id="viewChatbot" class="hidden flex-1 flex flex-col overflow-hidden">
-        <div class="h-12 px-6 flex items-center justify-between border-b border-slate-800/80 bg-slate-900/30 shrink-0">
-          <div class="flex items-center space-x-2 text-xs text-purple-300 font-semibold">
-            <i class="fa-solid fa-robot text-purple-400"></i>
-            <span>Chatbot — Assistant IA sur l'ensemble de votre base de connaissances</span>
+        <div class="h-11 px-6 flex items-center justify-between border-b border-white/[0.06] bg-[#0f1011]/80 shrink-0">
+          <div class="flex items-center space-x-2 text-xs text-indigo-300 font-medium">
+            <i class="fa-solid fa-robot text-indigo-400"></i>
+            <span>Chatbot : Assistant IA sur votre base de connaissances</span>
           </div>
         </div>
 
         <div class="flex-1 flex flex-col overflow-hidden p-6 max-w-4xl mx-auto w-full">
           <!-- Chat Message Feed -->
           <div id="chatMessages" class="flex-1 overflow-y-auto space-y-4 pr-2 mb-4">
-            <div class="flex items-start gap-3 p-4 rounded-2xl bg-slate-900 border border-slate-800 text-sm">
-              <div class="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center shrink-0">
-                <i class="fa-solid fa-brain"></i>
+            <div class="flex items-start gap-3 p-4 rounded-xl bg-[#0f1011] border border-white/[0.08] text-xs">
+              <div class="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
+                <i class="fa-solid fa-brain text-xs"></i>
               </div>
               <div class="space-y-1">
-                <span class="font-bold text-xs text-purple-300">Synapse AI Assistant</span>
-                <p class="text-slate-300 leading-relaxed text-xs">Bonjour ! Je suis connecté à l'intégralité de vos articles et posts sauvegardés. Posez-moi des questions comme :<br>• <i>"Qu'est-ce qu'on a vu sur les architectures multi-agents ?"</i><br>• <i>"Quels posts parlent de Fred Brooks ?"</i><br>• <i>"Fais-moi un récapitulatif des tendances IA de la semaine"</i></p>
+                <span class="font-semibold text-xs text-slate-200">Synapse AI Assistant</span>
+                <p class="text-slate-400 leading-relaxed text-xs">Bonjour. Je réponds à vos questions en me basant sur vos articles et rapports de veille enregistrés.<br>• <i>Quelles sont les architectures multi-agents vues récemment ?</i><br>• <i>Quels posts parlent de Fred Brooks ?</i><br>• <i>Synthèse des tendances IA récentes</i></p>
               </div>
             </div>
           </div>
@@ -252,12 +468,12 @@
               type="text"
               id="chatInput"
               required
-              placeholder="Posez une question sur l'ensemble de votre veille..."
-              class="flex-1 bg-slate-900 text-sm text-slate-100 placeholder-slate-500 pl-4 pr-12 py-3 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-500 shadow-inner"
+              placeholder="Posez une question sur votre veille..."
+              class="flex-1 bg-white/[0.03] text-xs text-slate-100 placeholder-slate-500 pl-4 pr-12 py-2.5 rounded-lg border border-white/[0.08] focus:outline-none focus:border-indigo-500/80 transition shadow-inner font-sans"
             >
-            <button type="submit" id="chatSubmitBtn" class="bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs px-5 py-3 rounded-xl shadow-lg shadow-purple-600/30 flex items-center gap-2">
+            <button type="submit" id="chatSubmitBtn" class="btn-primary text-xs font-medium px-4 py-2.5 rounded-lg flex items-center gap-2">
               <span>Envoyer</span>
-              <i class="fa-solid fa-paper-plane"></i>
+              <i class="fa-solid fa-paper-plane text-[10px]"></i>
             </button>
           </form>
         </div>
@@ -265,25 +481,25 @@
 
       <!-- View 3: Newsletter Hebdomadaire -->
       <div id="viewNewsletter" class="hidden flex-1 flex flex-col overflow-hidden">
-        <div class="h-12 px-6 flex items-center justify-between border-b border-slate-800/80 bg-slate-900/30 shrink-0">
-          <div class="flex items-center space-x-2 text-xs text-cyan-300 font-semibold">
-            <i class="fa-solid fa-newspaper text-cyan-400"></i>
-            <span>Générateur de Newsletter / Digest Hebdomadaire IA</span>
+        <div class="h-11 px-6 flex items-center justify-between border-b border-white/[0.06] bg-[#0f1011]/80 shrink-0">
+          <div class="flex items-center space-x-2 text-xs text-slate-300 font-medium">
+            <i class="fa-solid fa-newspaper text-indigo-400"></i>
+            <span>Générateur de Newsletter : Synthèse Hebdomadaire</span>
           </div>
-          <button onclick="generateNewsletter()" id="genNewsletterBtn" class="bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-medium text-xs px-4 py-1.5 rounded-lg shadow-lg flex items-center gap-2">
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <button onclick="generateNewsletter()" id="genNewsletterBtn" class="btn-primary text-xs px-3.5 py-1.5 rounded-lg flex items-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
             <span>Générer Newsletter (7 derniers jours)</span>
           </button>
         </div>
 
         <div class="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full">
-          <div id="newsletterContainer" class="glass rounded-2xl p-8 relative space-y-4">
+          <div id="newsletterContainer" class="glass-card rounded-xl p-8 relative space-y-4">
             <div class="text-center py-12">
-              <i class="fa-solid fa-paper-plane text-4xl text-cyan-400 mb-3 opacity-80"></i>
-              <h3 class="text-lg font-bold text-white mb-2">Générez votre récapitulatif hebdo</h3>
-              <p class="text-xs text-slate-400 max-w-md mx-auto mb-6">L'IA de Synapse va regrouper tous vos posts et articles de la semaine par thématique pour créer une synthèse prête à être partagée.</p>
-              <button onclick="generateNewsletter()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-cyan-600/30">
-                ✨ Générer la Newsletter maintenant
+              <i class="fa-solid fa-paper-plane text-3xl text-indigo-400 mb-3 opacity-80"></i>
+              <h3 class="text-base font-semibold text-white mb-2">Générer votre récapitulatif hebdomadaire</h3>
+              <p class="text-xs text-slate-400 max-w-md mx-auto mb-6">Regroupe vos articles de la semaine par thématique pour créer une synthèse Markdown structurée.</p>
+              <button onclick="generateNewsletter()" class="btn-primary text-xs px-4 py-2 rounded-lg">
+                Générer la Newsletter
               </button>
             </div>
           </div>
@@ -292,23 +508,23 @@
 
       <!-- View 4: Radar & Sentiment -->
       <div id="viewRadar" class="hidden flex-1 flex flex-col overflow-hidden">
-        <div class="h-12 px-6 flex items-center justify-between border-b border-slate-800/80 bg-slate-900/30 shrink-0">
-          <div class="flex items-center space-x-2 text-xs text-emerald-300 font-semibold">
+        <div class="h-11 px-6 flex items-center justify-between border-b border-white/[0.06] bg-[#0f1011]/80 shrink-0">
+          <div class="flex items-center space-x-2 text-xs text-slate-300 font-medium">
             <i class="fa-solid fa-chart-line text-emerald-400"></i>
-            <span>Radar & Sentiment — Analyse d'opinion sur la tech, modèles et entreprises</span>
+            <span>Radar & Sentiment : Veille stratégique d'opinion sur la tech et les modèles</span>
           </div>
         </div>
 
         <div class="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto w-full space-y-6">
           <!-- Search Bar & Suggestions -->
-          <div class="glass p-5 rounded-2xl border border-slate-800 space-y-4">
+          <div class="glass-card p-5 rounded-xl space-y-4">
             <div class="flex items-center justify-between">
-              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <h3 class="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-2">
                 <i class="fa-solid fa-magnifying-glass-chart text-emerald-400"></i>
                 Sonder l'opinion sur une entité (Entreprise, Modèle, CEO, Techno)
               </h3>
-              <span class="text-[10px] bg-emerald-950/60 text-emerald-300 border border-emerald-800/60 px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1">
-                <i class="fa-solid fa-bolt text-[9px]"></i> Deep Research Multi-Axes
+              <span class="text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 px-2 py-0.5 rounded-full font-mono flex items-center gap-1">
+                <i class="fa-solid fa-bolt text-[8px]"></i> Deep Research
               </span>
             </div>
 
@@ -429,25 +645,25 @@
   </div>
 
   <!-- Modal: Article Reader (Lecture Complète du Post) -->
-  <div id="readerModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 md:p-8">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col relative overflow-hidden">
-      <button onclick="closeReaderModal()" class="absolute right-5 top-5 text-slate-400 hover:text-white bg-slate-800/80 w-8 h-8 rounded-full flex items-center justify-center border border-slate-700">
-        <i class="fa-solid fa-xmark text-base"></i>
+  <div id="readerModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 md:p-8">
+    <div class="bg-[#0f1011] border border-white/[0.08] w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col relative overflow-hidden">
+      <button onclick="closeReaderModal()" class="absolute right-5 top-5 text-slate-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] w-8 h-8 rounded-lg flex items-center justify-center border border-white/[0.08] transition">
+        <i class="fa-solid fa-xmark text-sm"></i>
       </button>
 
       <!-- Reader Header -->
-      <div class="mb-4 pb-4 border-b border-slate-800 pr-10">
+      <div class="mb-4 pb-4 border-b border-white/[0.06] pr-10">
         <div class="flex items-center space-x-2 text-xs mb-2">
-          <span id="readerSiteBadge" class="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-950 text-blue-300 border border-blue-800/40">LinkedIn</span>
-          <span id="readerCategoryBadge" class="bg-indigo-950/80 text-indigo-300 px-2.5 py-0.5 rounded text-[11px] font-medium border border-indigo-800/30">Catégorie</span>
+          <span id="readerSiteBadge" class="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-white/[0.04] text-slate-300 border border-white/[0.08]">Lien</span>
+          <span id="readerCategoryBadge" class="font-mono text-[10px] px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Catégorie</span>
           <span id="readerDate" class="text-slate-500 font-mono text-[11px] ml-auto"></span>
         </div>
 
-        <h2 id="readerTitle" class="text-lg md:text-xl font-bold text-white leading-snug mb-2"></h2>
+        <h2 id="readerTitle" class="text-lg md:text-xl font-semibold text-[#f7f8f8] tracking-tight leading-snug mb-2"></h2>
 
         <div class="flex items-center justify-between text-xs pt-1">
-          <div id="readerAuthor" class="font-semibold text-indigo-300 flex items-center gap-1.5"></div>
-          <a id="readerSourceBtn" href="#" target="_blank" rel="noopener" class="text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 bg-indigo-950/50 px-3 py-1.5 rounded-lg border border-indigo-800/40">
+          <div id="readerAuthor" class="font-medium text-slate-400 flex items-center gap-1.5"></div>
+          <a id="readerSourceBtn" href="#" target="_blank" rel="noopener" class="btn-ghost px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs text-indigo-300 hover:text-white border-indigo-500/30">
             <span>Ouvrir la source</span>
             <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
           </a>
@@ -455,14 +671,14 @@
       </div>
 
       <!-- Mode Switcher: Article Complet vs Résumé IA -->
-      <div class="flex items-center justify-between bg-slate-950 p-1 rounded-xl border border-slate-800 mb-4 shrink-0">
+      <div class="flex items-center justify-between bg-black/40 p-1 rounded-xl border border-white/[0.06] mb-4 shrink-0">
         <div class="flex space-x-1 w-full">
-          <button id="readerTabFull" onclick="setReaderMode('full')" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition bg-indigo-950 text-indigo-300 border border-indigo-800/40">
+          <button id="readerTabFull" onclick="setReaderMode('full')" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition bg-white/[0.08] text-white border border-white/[0.1]">
             <i class="fa-solid fa-file-lines text-indigo-400"></i>
             <span>Article Complet</span>
           </button>
           <button id="readerTabSummary" onclick="setReaderMode('summary')" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition text-slate-400 hover:text-white">
-            <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i>
+            <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i>
             <span>Résumé IA</span>
           </button>
         </div>
@@ -472,8 +688,8 @@
       <div class="flex-1 overflow-y-auto pr-2 space-y-4">
         <div id="readerBody" class="text-slate-200 text-xs md:text-sm leading-relaxed font-normal selection:bg-indigo-500 selection:text-white"></div>
 
-        <div id="readerNotesContainer" class="hidden mt-4 p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-indigo-200">
-          <span class="font-bold text-indigo-400 uppercase tracking-wider block mb-1">Notes personnelles</span>
+        <div id="readerNotesContainer" class="hidden mt-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs text-indigo-200">
+          <span class="font-semibold text-slate-400 text-[10px] uppercase tracking-wider block mb-1">Notes personnelles</span>
           <p id="readerNotes" class="italic text-slate-300 text-xs"></p>
         </div>
 
@@ -583,14 +799,73 @@
     let articlesData = [];
     let activeReaderArticleId = null;
 
+    function getSelectedModel() {
+      return null;
+    }
+
+    function showToast(msg, type = 'info') {
+      let toastContainer = document.getElementById('toastContainer');
+      if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none';
+        toastContainer.setAttribute('aria-live', 'polite');
+        toastContainer.setAttribute('role', 'status');
+        document.body.appendChild(toastContainer);
+      }
+      const toast = document.createElement('div');
+      const isError = type === 'error';
+      toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl border text-xs font-medium flex items-center gap-2.5 shadow-xl transition-all duration-300 transform translate-y-2 opacity-0 ${
+        isError
+          ? 'bg-[#181113] border-rose-800/60 text-rose-300'
+          : 'bg-[#101216] border-white/10 text-slate-200'
+      }`;
+      toast.innerHTML = `
+        <i class="fa-solid ${isError ? 'fa-circle-exclamation text-rose-400' : 'fa-circle-check text-emerald-400'} text-xs"></i>
+        <span>${escapeHtml(msg)}</span>
+      `;
+      toastContainer.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-1');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function updateFilterPills(isFav) {
+      const pillAll = document.getElementById('filter-pill-all');
+      const pillFav = document.getElementById('filter-pill-fav');
+      if (pillAll && pillFav) {
+        if (isFav) {
+          pillAll.className = "px-3 py-1 rounded-lg font-medium text-xs text-slate-400 hover:text-white transition";
+          pillFav.className = "px-3 py-1 rounded-lg font-medium text-xs text-amber-300 bg-amber-500/20 border border-amber-500/40 shadow-sm transition flex items-center gap-1.5";
+        } else {
+          pillAll.className = "px-3 py-1 rounded-lg font-medium text-xs text-white bg-indigo-600/40 border border-indigo-500/50 shadow-sm transition";
+          pillFav.className = "px-3 py-1 rounded-lg font-medium text-xs text-slate-400 hover:text-amber-300 transition flex items-center gap-1.5";
+        }
+      }
+    }
+
     function showAllArticles() {
       currentCategory = 'Tous';
       onlyFavorites = false;
+      updateFilterPills(false);
       const searchInput = document.getElementById('searchInput');
       if (searchInput) searchInput.value = '';
       const filterBadge = document.getElementById('activeFilterBadge');
       if (filterBadge) filterBadge.innerText = 'Tous les contenus';
       switchTab('articles');
+    }
+
+    function filterFavorites() {
+      onlyFavorites = true;
+      updateFilterPills(true);
+      const filterBadge = document.getElementById('activeFilterBadge');
+      if (filterBadge) filterBadge.innerText = 'Favoris ★';
+      switchTab('articles');
+      fetchArticles();
     }
 
     function switchTab(tabName) {
@@ -609,25 +884,27 @@
       const btnNewsletter = document.getElementById('tab-btn-newsletter');
       const btnRadar = document.getElementById('tab-btn-radar');
 
-      if (btnArticles) btnArticles.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition";
-      if (btnChatbot) btnChatbot.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition";
-      if (btnNewsletter) btnNewsletter.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition";
-      if (btnRadar) btnRadar.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition";
+      const inactiveClass = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center space-x-2.5 text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] transition";
+
+      if (btnArticles) btnArticles.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] transition";
+      if (btnChatbot) btnChatbot.className = inactiveClass;
+      if (btnNewsletter) btnNewsletter.className = inactiveClass;
+      if (btnRadar) btnRadar.className = inactiveClass;
 
       if (tabName === 'articles') {
         if (viewArticles) viewArticles.classList.remove('hidden');
-        if (btnArticles) btnArticles.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between text-indigo-300 bg-indigo-950/70 border border-indigo-800/40 transition";
+        if (btnArticles) btnArticles.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between text-white bg-gradient-to-r from-indigo-600/30 to-purple-600/20 border border-indigo-500/50 shadow-sm transition";
         fetchArticles();
         fetchCategories();
       } else if (tabName === 'chatbot') {
         if (viewChatbot) viewChatbot.classList.remove('hidden');
-        if (btnChatbot) btnChatbot.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-purple-300 bg-purple-950/70 border border-purple-800/40 transition";
+        if (btnChatbot) btnChatbot.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center space-x-2.5 text-white bg-gradient-to-r from-purple-600/30 to-pink-600/20 border border-purple-500/50 shadow-sm transition";
       } else if (tabName === 'newsletter') {
         if (viewNewsletter) viewNewsletter.classList.remove('hidden');
-        if (btnNewsletter) btnNewsletter.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-cyan-300 bg-cyan-950/70 border border-cyan-800/40 transition";
+        if (btnNewsletter) btnNewsletter.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center space-x-2.5 text-white bg-gradient-to-r from-cyan-600/30 to-blue-600/20 border border-cyan-500/50 shadow-sm transition";
       } else if (tabName === 'radar') {
         if (viewRadar) viewRadar.classList.remove('hidden');
-        if (btnRadar) btnRadar.className = "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2.5 text-emerald-300 bg-emerald-950/70 border border-emerald-800/40 transition";
+        if (btnRadar) btnRadar.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center space-x-2.5 text-white bg-gradient-to-r from-emerald-600/30 to-teal-600/20 border border-emerald-500/50 shadow-sm transition";
         loadRadarHistory();
       }
     }
@@ -726,8 +1003,8 @@
         container.innerHTML = `
           <div class="flex items-center justify-between pb-4 border-b border-slate-800">
             <span class="text-xs font-semibold text-cyan-400">Newsletter basée sur ${data.articles_count} article(s)</span>
-            <button onclick="navigator.clipboard.writeText(document.getElementById('newsletterMarkdown').innerText); alert('Copié dans le presse-papier !');" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5">
-              <i class="fa-solid fa-copy text-cyan-400"></i> Copier en Markdown
+            <button onclick="navigator.clipboard.writeText(document.getElementById('newsletterMarkdown').innerText); showToast('Copié dans le presse-papier');" class="btn-ghost text-xs font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+              <i class="fa-solid fa-copy text-indigo-400"></i> Copier en Markdown
             </button>
           </div>
           <div id="newsletterMarkdown" class="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap selection:bg-cyan-500 selection:text-white pt-2">
@@ -826,17 +1103,18 @@ ${escapeHtml(data.newsletter_markdown)}
 
         container.innerHTML = categories.map(cat => {
           const isActive = currentCategory === cat.category;
+          const badge = getCategoryBadge(cat.category);
           return `
-            <button onclick="filterCategory('${cat.category}')" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition ${
+            <button onclick="filterCategory('${escapeHtml(cat.category)}')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-medium flex items-center justify-between transition ${
               isActive
-                ? 'bg-indigo-950/70 text-indigo-300 border border-indigo-800/40'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                ? 'bg-indigo-600/30 text-white border border-indigo-500/50 shadow-sm'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
             }">
-              <span class="truncate flex items-center gap-2">
-                <i class="fa-solid fa-folder text-indigo-400/80 text-[10px]"></i>
-                <span class="truncate">${cat.category}</span>
+              <span class="truncate flex items-center gap-2.5">
+                <span class="w-2 h-2 rounded-full ${badge.text.replace('text-', 'bg-')} shadow-[0_0_8px_currentColor]"></span>
+                <span class="truncate">${escapeHtml(cat.category)}</span>
               </span>
-              <span class="text-[10px] bg-slate-800/80 text-slate-400 px-1.5 py-0.5 rounded font-mono">${cat.count}</span>
+              <span class="text-[10px] bg-indigo-950/60 border border-indigo-500/25 text-indigo-300 px-2 py-0.5 rounded-full font-mono font-semibold">${cat.count}</span>
             </button>
           `;
         }).join('');
@@ -873,6 +1151,71 @@ ${escapeHtml(data.newsletter_markdown)}
       }
     }
 
+    function getCategoryBadge(category) {
+      const cat = (category || 'Tech & IA').toLowerCase();
+      if (cat.includes('ia') || cat.includes('ai') || cat.includes('data')) {
+        return {
+          bg: 'bg-indigo-500/15',
+          text: 'text-indigo-300',
+          border: 'border-indigo-500/30',
+          icon: 'fa-brain'
+        };
+      }
+      if (cat.includes('dev') || cat.includes('tech') || cat.includes('code')) {
+        return {
+          bg: 'bg-cyan-500/15',
+          text: 'text-cyan-300',
+          border: 'border-cyan-500/30',
+          icon: 'fa-code'
+        };
+      }
+      if (cat.includes('linkedin')) {
+        return {
+          bg: 'bg-blue-500/15',
+          text: 'text-blue-300',
+          border: 'border-blue-500/30',
+          icon: 'fa-linkedin'
+        };
+      }
+      if (cat.includes('business') || cat.includes('saas') || cat.includes('finance')) {
+        return {
+          bg: 'bg-amber-500/15',
+          text: 'text-amber-300',
+          border: 'border-amber-500/30',
+          icon: 'fa-briefcase'
+        };
+      }
+      if (cat.includes('design') || cat.includes('ux') || cat.includes('creative')) {
+        return {
+          bg: 'bg-rose-500/15',
+          text: 'text-rose-300',
+          border: 'border-rose-500/30',
+          icon: 'fa-palette'
+        };
+      }
+      return {
+        bg: 'bg-emerald-500/15',
+        text: 'text-emerald-300',
+        border: 'border-emerald-500/30',
+        icon: 'fa-layer-group'
+      };
+    }
+
+    function cleanMarkdown(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/^#+\s+/gm, '')
+        .trim();
+    }
+
     function renderArticles(articles) {
       const grid = document.getElementById('articlesGrid');
       const emptyState = document.getElementById('emptyState');
@@ -896,74 +1239,82 @@ ${escapeHtml(data.newsletter_markdown)}
         const site = art.site_name || 'Article';
         const hasValidUrl = art.url && art.url !== 'null' && art.url !== 'undefined' && String(art.url).startsWith('http');
         const isLinkedIn = site.toLowerCase().includes('linkedin') || (hasValidUrl && art.url.includes('linkedin.com'));
+        const badge = getCategoryBadge(art.category);
+        const cleanTitle = cleanMarkdown(art.title);
+        const cleanSummary = cleanMarkdown(art.summary);
 
         return `
-          <div class="glass rounded-2xl p-5 flex flex-col justify-between hover:border-slate-700 transition duration-200 group relative">
-            <div>
-              <!-- Top Row: Badge & Date & Fav -->
-              <div class="flex items-center justify-between mb-3 text-xs">
+          <div class="double-bezel-card group flex flex-col justify-between h-full">
+            <div class="double-bezel-inner flex-col justify-between h-full space-y-3.5">
+              <div class="space-y-2.5">
+                <!-- Top Row: Category Chip & Source & Fav/Delete -->
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="inline-flex items-center gap-1 font-mono text-[9.5px] px-2.5 py-0.5 rounded-full ${badge.bg} ${badge.text} border ${badge.border} font-semibold shadow-sm">
+                      <i class="fa-solid ${badge.icon} text-[8.5px]"></i>
+                      <span>${escapeHtml(art.category)}</span>
+                    </span>
+                    <span class="inline-flex items-center gap-1 font-mono text-[9px] px-2 py-0.5 rounded-full bg-white/[0.04] text-slate-300 border border-white/[0.08]">
+                      ${isLinkedIn ? '<i class="fa-brands fa-linkedin text-blue-400 text-[9px]"></i>' : ''}
+                      <span>${escapeHtml(site)}</span>
+                    </span>
+                  </div>
+
+                  <div class="flex items-center gap-1">
+                    <button onclick="toggleFavorite(${art.id}, ${!isFav})" title="${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}" aria-label="Favori" class="text-sm transition p-1 ${isFav ? 'text-amber-400' : 'text-slate-600 hover:text-amber-400'}">
+                      <i class="fa-solid fa-star text-xs"></i>
+                    </button>
+                    <button onclick="deleteArticle(${art.id})" title="Supprimer" aria-label="Supprimer" class="text-slate-600 hover:text-rose-400 text-xs p-1 transition">
+                      <i class="fa-solid fa-trash-can text-[11px]"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Title (Click opens Reader Modal) with fixed baseline -->
+                <h3 class="font-semibold text-white text-sm md:text-[14.5px] leading-snug group-hover:text-indigo-300 transition line-clamp-2 min-h-[2.6rem] cursor-pointer tracking-[-0.02em] pt-0.5" onclick="openReaderModal(${art.id})">
+                  <span>${escapeHtml(cleanTitle)}</span>
+                </h3>
+
+                <!-- Meta Row: Author & Date -->
+                <div class="flex items-center gap-2 text-[11px] text-slate-400 font-mono">
+                  ${art.author ? `
+                    <span class="text-indigo-300/90 font-sans flex items-center gap-1 truncate max-w-[150px]">
+                      <i class="fa-solid fa-user-pen text-[9px] text-indigo-400 shrink-0"></i>
+                      <span class="truncate">${escapeHtml(cleanMarkdown(art.author))}</span>
+                    </span>
+                    <span class="text-slate-600">•</span>
+                  ` : ''}
+                  <span>${dateStr}</span>
+                </div>
+
+                <!-- Summary (Click opens Reader Modal) with clamped height -->
+                ${cleanSummary ? `
+                  <p class="text-slate-300/80 text-xs leading-relaxed line-clamp-3 min-h-[3.5rem] cursor-pointer hover:text-slate-100 transition pt-0.5 font-normal" onclick="openReaderModal(${art.id})">${escapeHtml(cleanSummary)}</p>
+                ` : '<div class="min-h-[3.5rem]"></div>'}
+
+                <!-- Personal Notes -->
+                ${art.notes ? `
+                  <div class="mt-2 p-2.5 rounded-xl bg-indigo-500/[0.08] border border-indigo-500/25 text-xs text-indigo-200 flex items-start space-x-2">
+                    <i class="fa-solid fa-note-sticky text-indigo-400 text-xs mt-0.5 shrink-0"></i>
+                    <p class="italic text-[11px] line-clamp-2 leading-relaxed">${escapeHtml(cleanMarkdown(art.notes))}</p>
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- Pinned Footer Action Bar -->
+              <div class="pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs mt-auto">
                 <div class="flex items-center space-x-2">
-                  <span class="px-2.5 py-1 rounded-md text-[11px] font-semibold ${
-                    isLinkedIn ? 'bg-blue-950 text-blue-300 border border-blue-800/40' : 'bg-slate-800 text-indigo-300 border border-slate-700'
-                  }">
-                    ${isLinkedIn ? '<i class="fa-brands fa-linkedin text-blue-400 mr-1"></i>' : ''}${site}
-                  </span>
-                  <span class="bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded text-[10px] font-medium border border-indigo-800/30">
-                    ${art.category}
-                  </span>
-                </div>
-
-                <div class="flex items-center space-x-1.5">
-                  <button onclick="toggleFavorite(${art.id}, ${!isFav})" title="${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}" class="text-sm transition ${isFav ? 'text-amber-400' : 'text-slate-600 hover:text-amber-400'}">
-                    <i class="fa-solid fa-star"></i>
+                  <button onclick="openReaderModal(${art.id}, 'full')" class="btn-action-ghost px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5">
+                    <i class="fa-solid fa-book-open text-[11px] text-slate-400"></i>
+                    <span>Lire</span>
                   </button>
-                  <button onclick="deleteArticle(${art.id})" title="Supprimer" class="text-slate-600 hover:text-rose-400 text-xs p-1">
-                    <i class="fa-solid fa-trash"></i>
+                  <button onclick="openReaderModal(${art.id}, 'summary')" class="btn-action-primary px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5">
+                    <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i>
+                    <span>Résumé IA</span>
                   </button>
                 </div>
-              </div>
-
-              <!-- Author name if available -->
-              ${art.author ? `
-                <div class="text-xs font-semibold text-indigo-300/90 mb-1.5 flex items-center gap-1.5">
-                  <i class="fa-solid fa-user-pen text-[10px] text-indigo-400"></i>
-                  <span>${escapeHtml(art.author)}</span>
-                </div>
-              ` : ''}
-
-              <!-- Title (Click opens Reader Modal) -->
-              <h3 class="font-bold text-slate-100 text-sm leading-snug mb-2 group-hover:text-indigo-300 transition line-clamp-2 cursor-pointer" onclick="openReaderModal(${art.id})">
-                <span>${escapeHtml(art.title)}</span>
-              </h3>
-
-              <!-- Summary (Click opens Reader Modal) -->
-              ${art.summary ? `
-                <p class="text-slate-400 text-xs leading-relaxed mb-3 line-clamp-4 cursor-pointer hover:text-slate-200 transition" onclick="openReaderModal(${art.id})">${escapeHtml(art.summary)}</p>
-              ` : ''}
-
-              <!-- Personal Notes -->
-              ${art.notes ? `
-                <div class="mt-2 p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 text-xs text-indigo-200/90 flex items-start space-x-2">
-                  <i class="fa-solid fa-note-sticky text-indigo-400 text-xs mt-0.5 shrink-0"></i>
-                  <p class="italic text-[11px] line-clamp-2">${escapeHtml(art.notes)}</p>
-                </div>
-              ` : ''}
-            </div>
-
-            <!-- Footer Row -->
-            <div class="pt-4 mt-4 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500">
-              <div class="flex items-center space-x-2">
-                <button onclick="openReaderModal(${art.id}, 'full')" class="text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 font-semibold transition bg-indigo-950/40 px-2.5 py-1 rounded-md border border-indigo-800/30">
-                  <i class="fa-solid fa-book-open text-xs"></i> Lire
-                </button>
-                <button onclick="openReaderModal(${art.id}, 'summary')" class="text-purple-400 hover:text-purple-300 flex items-center gap-1.5 font-semibold transition bg-purple-950/40 px-2.5 py-1 rounded-md border border-purple-800/30">
-                  <i class="fa-solid fa-wand-magic-sparkles text-xs"></i> Résumé IA
-                </button>
-              </div>
-              <div class="flex items-center space-x-3">
-                <span>${dateStr}</span>
-                <button onclick="openNotesModal(${art.id})" class="text-slate-400 hover:text-indigo-300 flex items-center gap-1 font-medium transition">
-                  <i class="fa-solid fa-pen text-[10px]"></i> Note
+                <button onclick="openNotesModal(${art.id})" class="btn-action-ghost p-1.5 rounded-xl text-slate-400 hover:text-indigo-300 transition" title="Éditer la note" aria-label="Éditer la note">
+                  <i class="fa-solid fa-pen text-[10px]"></i>
                 </button>
               </div>
             </div>
@@ -1235,9 +1586,28 @@ ${escapeHtml(data.newsletter_markdown)}
           currentReaderArticle = updatedArt;
           await fetchArticles();
           setReaderMode('summary');
+        } else {
+          const bodyEl = document.getElementById('readerBody');
+          if (bodyEl) {
+            bodyEl.innerHTML = `
+              <div class="p-4 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs text-center space-y-2">
+                <p>La génération a pris du retard ou a échoué.</p>
+                <button onclick="triggerAiEnrichmentInModal(${id})" class="px-3 py-1 bg-rose-900/60 hover:bg-rose-800 rounded-lg text-white font-semibold transition">Réessayer</button>
+              </div>
+            `;
+          }
         }
       } catch (err) {
         console.error('Erreur enrichissement IA:', err);
+        const bodyEl = document.getElementById('readerBody');
+        if (bodyEl) {
+          bodyEl.innerHTML = `
+            <div class="p-4 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs text-center space-y-2">
+              <p>Erreur de communication avec l'API IA.</p>
+              <button onclick="triggerAiEnrichmentInModal(${id})" class="px-3 py-1 bg-rose-900/60 hover:bg-rose-800 rounded-lg text-white font-semibold transition">Réessayer</button>
+            </div>
+          `;
+        }
       }
     }
 
@@ -1309,7 +1679,7 @@ ${escapeHtml(data.newsletter_markdown)}
     async function extractFromUrl() {
       const url = document.getElementById('addUrl').value.trim();
       if (!url) {
-        alert('Veuillez entrer une URL valide.');
+        showToast('Veuillez entrer une URL valide.', 'error');
         return;
       }
 
@@ -1412,7 +1782,7 @@ ${escapeHtml(data.newsletter_markdown)}
     function copyRadarShareLink(entity) {
       const shareUrl = window.location.origin + window.location.pathname + '?radar=' + encodeURIComponent(entity);
       navigator.clipboard.writeText(shareUrl);
-      alert('✓ Lien de partage copié dans le presse-papier :\n' + shareUrl);
+      showToast('Lien de partage copié dans le presse-papier');
     }
 
     function renderRadarPoint(item, isPro) {
@@ -1424,14 +1794,14 @@ ${escapeHtml(data.newsletter_markdown)}
       if (sources.length > 0) {
         const badgeColor = isPro ? 'emerald' : 'rose';
         sourcesHtml = `
-          <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-1.5">
-            <span class="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
-              <i class="fa-solid fa-book-open text-${badgeColor}-400 text-[10px]"></i> Pour approfondir :
+          <div class="mt-2.5 pt-2 border-t border-white/[0.05] flex flex-wrap items-center gap-1.5">
+            <span class="text-[9.5px] uppercase tracking-wider text-slate-500 font-mono flex items-center gap-1">
+              <i class="fa-solid fa-book-open text-${badgeColor}-400 text-[9px]"></i> Sources :
             </span>
             ${sources.map(s => `
-              <a href="${escapeHtml(s.url || '#')}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[11px] text-${badgeColor}-300 hover:text-white bg-${badgeColor}-950/50 hover:bg-${badgeColor}-900/60 px-2 py-0.5 rounded-md border border-${badgeColor}-800/60 transition shadow-sm">
-                <span>${escapeHtml(s.title || 'Source')}</span>
-                <i class="fa-solid fa-arrow-up-right-from-square text-[8px] opacity-70"></i>
+              <a href="${escapeHtml(s.url || '#')}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[11px] font-mono text-slate-300 hover:text-white bg-white/[0.03] hover:bg-white/[0.08] px-2 py-0.5 rounded-md border border-white/[0.08] hover:border-white/[0.16] transition shadow-sm">
+                <span class="truncate max-w-[180px]">${escapeHtml(s.title || 'Source Web')}</span>
+                <i class="fa-solid fa-arrow-up-right-from-square text-[8px] opacity-60"></i>
               </a>
             `).join('')}
           </div>
@@ -1439,7 +1809,7 @@ ${escapeHtml(data.newsletter_markdown)}
       }
 
       return `
-        <div class="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800/60 space-y-1">
+        <div class="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05] space-y-1">
           ${bulletHtml}
           ${sourcesHtml}
         </div>
@@ -1450,69 +1820,159 @@ ${escapeHtml(data.newsletter_markdown)}
       const container = document.getElementById('radarResultsContainer');
       const score = data.sentiment_score || 50;
       const label = data.sentiment_label || 'Neutre / Mitigé';
+      const snapshots = data.available_snapshots || [];
+      const currentId = data.id;
+
+      // Format snapshot options
+      let snapshotsOptionsHtml = '';
+      if (snapshots.length > 0) {
+        snapshotsOptionsHtml = snapshots.map((s, idx) => {
+          const isSelected = (s.id === currentId || (!currentId && idx === 0)) ? 'selected' : '';
+          const dateStr = s.created_at ? s.created_at.slice(0, 16).replace('T', ' ') : 'Récent';
+          const isLatest = idx === 0 ? ' (Dernier)' : '';
+          return `<option value="${s.id}" ${isSelected} class="bg-[#0e0f12] text-slate-200">📅 ${dateStr} - ${s.sentiment_score}%${isLatest}</option>`;
+        }).join('');
+      } else {
+        const nowStr = new Date().toISOString().slice(0, 16).replace('T', ' ');
+        snapshotsOptionsHtml = `<option value="current" selected class="bg-[#0e0f12] text-slate-200">📅 ${nowStr} (Actuel)</option>`;
+      }
 
       container.classList.remove('hidden');
       container.innerHTML = `
-        <!-- Sentiment Gauge Card -->
-        <div class="glass p-6 rounded-2xl border border-slate-800 space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block mb-1">Rapport d'Opinion Deep Research</span>
-              <h2 class="text-xl font-extrabold text-white">${escapeHtml(data.entity)}</h2>
-            </div>
-            <div class="flex items-center gap-2">
-              <button onclick="copyRadarShareLink('${escapeHtml(data.entity)}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 flex items-center gap-1.5 transition">
-                <i class="fa-solid fa-link text-cyan-400"></i> Copier le lien
-              </button>
-              <button onclick="saveRadarReportToWatch()" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold px-3.5 py-2 rounded-xl border border-emerald-600 shadow-lg shadow-emerald-700/30 flex items-center gap-1.5 transition">
-                <i class="fa-solid fa-bookmark"></i> Enregistrer
-              </button>
-            </div>
-          </div>
+        <!-- Sentiment Gauge Card (Double-Bezel Architecture) -->
+        <div class="double-bezel-card">
+          <div class="double-bezel-inner flex-col space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span class="font-mono text-[9.5px] uppercase tracking-[0.2em] text-emerald-400 font-semibold block mb-1">Deep Research : Rapport d'Opinion</span>
+                <h2 class="text-2xl font-bold text-white tracking-[-0.03em]">${escapeHtml(data.entity)}</h2>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <!-- Historical Date Selector -->
+                <div class="flex items-center gap-1.5 bg-black/40 border border-white/[0.08] rounded-xl px-2.5 py-1.5">
+                  <i class="fa-solid fa-clock-rotate-left text-slate-500 text-xs"></i>
+                  <select id="radarSnapshotSelector" onchange="changeRadarSnapshot(this.value)" class="bg-transparent text-xs text-slate-200 focus:outline-none cursor-pointer font-mono">
+                    ${snapshotsOptionsHtml}
+                  </select>
+                </div>
 
-          <p class="text-xs text-slate-300 leading-relaxed">${escapeHtml(data.summary)}</p>
+                <!-- Quick Refresh Button -->
+                <button onclick="refreshCurrentRadarEntity('${escapeHtml(data.entity)}')" class="btn-action-primary text-xs font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition" title="Relancer une analyse en direct et comparer l'évolution">
+                  <i class="fa-solid fa-arrows-rotate text-[10px]"></i> Actualiser
+                </button>
 
-          <!-- Visual Sentiment Bar -->
-          <div class="space-y-1.5 pt-2">
-            <div class="flex justify-between text-xs font-bold">
-              <span class="text-emerald-400">🟢 Opinions Positives : ${score}%</span>
-              <span class="text-rose-400">🔴 Opinions Négatives : ${100 - score}%</span>
+                <!-- Share Link Button -->
+                <button onclick="copyRadarShareLink('${escapeHtml(data.entity)}')" class="btn-action-ghost text-xs font-medium px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition">
+                  <i class="fa-solid fa-link text-indigo-400 text-xs"></i> Copier le lien
+                </button>
+              </div>
             </div>
-            <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden flex border border-slate-800">
-              <div class="bg-emerald-500 h-full transition-all duration-500" style="width: ${score}%"></div>
-              <div class="bg-rose-500 h-full transition-all duration-500" style="width: ${100 - score}%"></div>
+
+            <!-- Auto-save notification -->
+            <div class="flex items-center gap-2 text-[11px] text-slate-400 pt-1 border-t border-white/[0.04]">
+              <span class="inline-flex items-center gap-1 text-emerald-400 font-medium">
+                <i class="fa-solid fa-circle-check text-[10px]"></i> Enregistré automatiquement
+              </span>
+              <span class="font-mono text-[10px] text-slate-500">• Horodaté le ${escapeHtml((data.created_at || new Date().toISOString()).slice(0, 16).replace('T', ' '))}</span>
             </div>
-            <div class="text-center text-[11px] text-slate-400 font-semibold pt-1">
-              Tendance globale : <span class="text-emerald-300 font-bold">${escapeHtml(label)}</span>
+
+            <p class="text-xs md:text-sm text-slate-300 leading-relaxed font-normal">${escapeHtml(data.summary)}</p>
+
+            ${data.evolution_note ? `
+            <!-- Evolution Note Card -->
+            <div class="p-4 rounded-xl bg-indigo-500/[0.05] border border-indigo-500/25 space-y-1.5">
+              <div class="flex items-center gap-2 text-xs font-semibold text-indigo-300">
+                <i class="fa-solid fa-chart-line text-indigo-400"></i>
+                <span>Évolution constatée depuis le précédent snapshot :</span>
+              </div>
+              <p class="text-xs text-slate-300 leading-relaxed font-normal">${escapeHtml(data.evolution_note)}</p>
+            </div>
+            ` : ''}
+
+            <!-- Visual Sentiment Bar with Precision Track -->
+            <div class="space-y-2 pt-2">
+              <div class="flex justify-between text-xs font-mono font-medium">
+                <span class="text-emerald-400 flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Opinions Positives : ${score}%
+                </span>
+                <span class="text-rose-400 flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Opinions Négatives : ${100 - score}%
+                </span>
+              </div>
+              <div class="w-full h-3 bg-black/60 rounded-full overflow-hidden flex border border-white/[0.08] p-0.5">
+                <div class="bg-emerald-500 h-full rounded-full transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] shadow-[0_0_12px_rgba(16,185,129,0.3)]" style="width: ${score}%"></div>
+                <div class="bg-rose-500 h-full rounded-full transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] shadow-[0_0_12px_rgba(244,63,94,0.3)]" style="width: ${100 - score}%"></div>
+              </div>
+              <div class="text-center text-[11px] text-slate-400 pt-1">
+                Tendance globale : <span class="text-white font-semibold">${escapeHtml(label)}</span>
+              </div>
             </div>
           </div>
         </div>
+
+        ${data.news_and_trends ? `
+        <!-- News & Trends Card (Double-Bezel) -->
+        <div class="double-bezel-card">
+          <div class="double-bezel-inner flex-col space-y-2.5">
+            <h3 class="font-mono text-[10px] uppercase tracking-[0.18em] text-indigo-300 font-semibold flex items-center gap-2">
+              <i class="fa-solid fa-newspaper text-indigo-400"></i>
+              Dernières Actualités & Discussions du marché
+            </h3>
+            <p class="text-xs text-slate-300 leading-relaxed font-normal">
+              ${escapeHtml(data.news_and_trends)}
+            </p>
+          </div>
+        </div>
+        ` : ''}
 
         <!-- Pros vs Cons 2-Column Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <!-- Pros Card -->
-          <div class="glass p-5 rounded-2xl border border-emerald-900/40 bg-emerald-950/20 space-y-3">
-            <h3 class="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-2">
-              <i class="fa-solid fa-circle-check text-emerald-400"></i>
-              Points Forts & Avantages Majeurs (Pros)
-            </h3>
-            <div class="space-y-3 text-xs">
-              ${(data.pros || []).map(p => renderRadarPoint(p, true)).join('')}
+          <div class="double-bezel-card">
+            <div class="double-bezel-inner flex-col space-y-3.5 border-emerald-500/20 bg-emerald-950/[0.04]">
+              <h3 class="font-mono text-[10px] uppercase tracking-[0.18em] text-emerald-400 font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                Points Forts & Avantages Majeurs (Pros)
+              </h3>
+              <div class="space-y-2.5 text-xs">
+                ${(data.pros || []).map(p => renderRadarPoint(p, true)).join('')}
+              </div>
             </div>
           </div>
 
           <!-- Cons Card -->
-          <div class="glass p-5 rounded-2xl border border-rose-900/40 bg-rose-950/20 space-y-3">
-            <h3 class="text-xs font-bold text-rose-300 uppercase tracking-wider flex items-center gap-2">
-              <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
-              Limites, Controverses & Risques (Cons)
-            </h3>
-            <div class="space-y-3 text-xs">
-              ${(data.cons || []).map(c => renderRadarPoint(c, false)).join('')}
+          <div class="double-bezel-card">
+            <div class="double-bezel-inner flex-col space-y-3.5 border-rose-500/20 bg-rose-950/[0.04]">
+              <h3 class="font-mono text-[10px] uppercase tracking-[0.18em] text-rose-400 font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
+                Limites, Controverses & Risques (Cons)
+              </h3>
+              <div class="space-y-2.5 text-xs">
+                ${(data.cons || []).map(c => renderRadarPoint(c, false)).join('')}
+              </div>
             </div>
           </div>
         </div>
       `;
+    }
+
+    async function changeRadarSnapshot(snapshotId) {
+      if (!snapshotId || snapshotId === 'current') return;
+      try {
+        const res = await fetch(`/api/sentiment/reports/snapshot/${snapshotId}`);
+        if (res.ok) {
+          const data = await res.json();
+          currentRadarData = data;
+          renderRadarReportUI(data);
+        }
+      } catch (e) {
+        console.error('Erreur chargement snapshot:', e);
+      }
+    }
+
+    async function refreshCurrentRadarEntity(entity) {
+      prefillRadarSearch(entity);
+      await submitRadarSearch();
     }
 
     async function submitRadarSearch(e) {
@@ -1532,7 +1992,7 @@ ${escapeHtml(data.newsletter_markdown)}
         <div class="text-center py-12 glass rounded-2xl border border-slate-800 p-8 space-y-3">
           <i class="fa-solid fa-chart-pie text-4xl text-emerald-400 animate-pulse mb-2"></i>
           <h3 class="text-base font-bold text-white">Deep Research en cours sur "${escapeHtml(entity)}"...</h3>
-          <p class="text-xs text-slate-400">Génération de 4 requêtes contradictoires, exploration Web (pros & cons) et synthèse stratégique...</p>
+          <p class="text-xs text-slate-400">Recherche web en direct, analyse contradictoire et comparaison temporelle...</p>
         </div>
       `;
 
@@ -1545,31 +2005,12 @@ ${escapeHtml(data.newsletter_markdown)}
         const data = await res.json();
         currentRadarData = data;
         renderRadarReportUI(data);
+        loadRadarHistory();
       } catch (err) {
         container.innerHTML = `<div class="p-4 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-300 text-xs">Erreur lors de l'analyse de sentiment.</div>`;
       } finally {
         btn.disabled = false;
         btn.innerHTML = `<span>Analyser</span> <i class="fa-solid fa-bolt text-[10px]"></i>`;
-      }
-    }
-
-    async function saveRadarReportToWatch() {
-      if (!currentRadarData) return;
-
-      try {
-        // Save EXCLUSIVELY to dedicated sentiment_reports table (keeps main watch feed clean!)
-        const res = await fetch('/api/sentiment/reports', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(currentRadarData)
-        });
-
-        if (res.ok) {
-          alert('✓ Rapport d\'opinion enregistré dans l\'historique du Radar !');
-          await loadRadarHistory();
-        }
-      } catch (e) {
-        alert('Erreur lors de la sauvegarde du rapport.');
       }
     }
 
@@ -1581,45 +2022,60 @@ ${escapeHtml(data.newsletter_markdown)}
       try {
         const res = await fetch('/api/sentiment/reports');
         if (!res.ok) return;
-        const reports = await res.json();
+        const entityGroups = await res.json();
 
         if (countEl) {
-          countEl.innerText = `${reports.length} rapport${reports.length > 1 ? 's' : ''} sauvegardé${reports.length > 1 ? 's' : ''}`;
+          countEl.innerText = `${entityGroups.length} entité${entityGroups.length > 1 ? 's' : ''} suivie${entityGroups.length > 1 ? 's' : ''}`;
         }
 
-        if (reports.length === 0) {
+        if (entityGroups.length === 0) {
           container.innerHTML = `
             <div class="text-center py-6 col-span-full text-xs text-slate-500">
-              Aucun rapport d'opinion sauvegardé pour l'instant. Cliquez sur "Enregistrer" après une analyse.
+              Aucune analyse enregistrée pour l'instant. Lancez une analyse ci-dessus.
             </div>
           `;
           return;
         }
 
-        container.innerHTML = reports.map(r => {
-          const score = r.sentiment_score || 50;
-          const badgeClass = score >= 60 ? 'text-emerald-400 bg-emerald-950/60 border-emerald-800/60' : (score <= 40 ? 'text-rose-400 bg-rose-950/60 border-rose-800/60' : 'text-amber-400 bg-amber-950/60 border-amber-800/60');
-          return `
-            <div class="glass p-4 rounded-xl border border-slate-800 space-y-2.5 flex flex-col justify-between">
-              <div class="space-y-1.5">
-                <div class="flex items-center justify-between">
-                  <h4 class="text-xs font-bold text-white truncate">${escapeHtml(r.entity)}</h4>
-                  <span class="text-[10px] px-2 py-0.5 rounded-full border ${badgeClass} font-semibold">
-                    ${score}%
-                  </span>
-                </div>
-                <p class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
-                  ${escapeHtml(r.summary || '')}
-                </p>
-              </div>
+        container.innerHTML = entityGroups.map(group => {
+          const latest = group.latest_snapshot || {};
+          const score = latest.sentiment_score || 50;
+          const badgeColor = score >= 60 ? 'emerald' : (score <= 40 ? 'rose' : 'amber');
+          const dateStr = latest.created_at ? latest.created_at.slice(0, 16).replace('T', ' ') : 'N/A';
+          const count = group.snapshots_count || 1;
 
-              <div class="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
-                <button onclick="viewSavedRadarReport('${escapeHtml(r.entity)}')" class="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 text-[11px] transition">
-                  <i class="fa-solid fa-eye text-[10px]"></i> Consulter
-                </button>
-                <button onclick="deleteRadarReport(${r.id})" class="text-slate-500 hover:text-rose-400 p-1 transition" title="Supprimer de l'historique">
-                  <i class="fa-solid fa-trash-can text-[11px]"></i>
-                </button>
+          return `
+            <div class="double-bezel-card group">
+              <div class="double-bezel-inner flex-col justify-between space-y-3">
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-semibold text-white tracking-[-0.02em] truncate">${escapeHtml(group.entity)}</h4>
+                    <span class="font-mono text-[10px] px-2 py-0.5 rounded-md border border-${badgeColor}-500/20 bg-${badgeColor}-500/10 text-${badgeColor}-300 font-semibold">
+                      ${score}%
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-1.5 font-mono text-[9.5px] text-slate-500">
+                    <span class="px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-300 border border-white/[0.06] font-medium">${count} snapshot${count > 1 ? 's' : ''}</span>
+                    <span>• Dernier : ${dateStr}</span>
+                  </div>
+                  <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed pt-0.5 font-normal">
+                    ${escapeHtml(latest.summary || '')}
+                  </p>
+                </div>
+
+                <div class="flex items-center justify-between pt-3 border-t border-white/[0.05] text-xs">
+                  <div class="flex items-center gap-2">
+                    <button onclick="viewSavedRadarReport('${escapeHtml(group.entity)}')" class="btn-action-ghost text-emerald-400 hover:text-white px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 text-[11px] transition">
+                      <i class="fa-solid fa-eye text-[9px]"></i> Consulter
+                    </button>
+                    <button onclick="refreshCurrentRadarEntity('${escapeHtml(group.entity)}')" class="btn-action-ghost text-indigo-300 hover:text-white px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 text-[11px] transition" title="Actualiser l'analyse">
+                      <i class="fa-solid fa-arrows-rotate text-[9px]"></i> Actualiser
+                    </button>
+                  </div>
+                  <button onclick="deleteRadarEntity('${escapeHtml(group.entity)}')" class="text-slate-600 hover:text-rose-400 p-1.5 transition rounded-md hover:bg-white/[0.04]" title="Supprimer tout l'historique de cette entité">
+                    <i class="fa-solid fa-trash-can text-[11px]"></i>
+                  </button>
+                </div>
               </div>
             </div>
           `;
@@ -1640,19 +2096,20 @@ ${escapeHtml(data.newsletter_markdown)}
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       } catch (e) {
-        alert('Erreur lors du chargement du rapport sauvegardé.');
+        showToast('Erreur lors du chargement du rapport sauvegardé.', 'error');
       }
     }
 
-    async function deleteRadarReport(id) {
-      if (!confirm('Supprimer ce rapport de l\'historique ?')) return;
+    async function deleteRadarEntity(entity) {
+      if (!confirm(`Supprimer tout l'historique pour "${entity}" ?`)) return;
       try {
-        const res = await fetch(`/api/sentiment/reports/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/sentiment/reports/entity/${encodeURIComponent(entity)}`, { method: 'DELETE' });
         if (res.ok) {
+          showToast('Historique supprimé.');
           loadRadarHistory();
         }
       } catch (e) {
-        alert('Erreur lors de la suppression.');
+        showToast('Erreur lors de la suppression.', 'error');
       }
     }
 

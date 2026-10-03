@@ -27,3 +27,12 @@ An interactive assistant that answers user queries using the complete corpus of 
 
 ### Article Q&A
 A focused chat module scoped to a single Watch Entry, capable of combining article body text with targeted web search results when external context is requested.
+
+### Sentiment Report / Rapport d'Opinion
+A structured strategic analysis of a tech entity (company, model, framework, or CEO) combining a visual positive/negative opinion balance, recent news synthesis, and sourced pros/cons derived exclusively from live web search.
+*Avoid:* Survey, poll, vote
+
+Saved to a dedicated local history table (`sentiment_reports`) without populating the main watch feed, and indexed into the Knowledge Base Chatbot context.
+
+### Deep Research (Radar)
+An adversarial multi-axis web exploration technique that queries both competitive advantages and hidden controversies, developer complaints, and business model risks to generate balanced sentiment evaluations.

@@ -40,6 +40,8 @@ class SentimentReportCreate(BaseModel):
     sentiment_score: int
     sentiment_label: str
     summary: str
+    news_and_trends: Optional[str] = ""
+    evolution_note: Optional[str] = ""
     pros: Optional[List[Any]] = []
     cons: Optional[List[Any]] = []
     sources: Optional[List[dict]] = []

@@ -9,9 +9,11 @@ from ai_service import (
     analyze_sentiment_radar,
     answer_article_question,
     answer_rag_question,
+    compare_sentiment_evolution,
     extract_full_text_from_url,
     generate_ai_summary_and_tags,
     generate_weekly_newsletter,
+    get_vertex_client,
 )
 from bs4 import BeautifulSoup
 from database import get_db_connection, init_db
@@ -302,10 +304,20 @@ def ai_enrich_article(article_id: int, req: Optional[EnrichRequest] = None):
     author = article.get("author") or ""
     req_model = req.model if req else None
 
-    if url and url.startswith("http") and len(content.strip()) < 100:
-        extracted_text = extract_full_text_from_url(url)
-        if extracted_text:
-            content = extracted_text
+    # Only attempt extraction if not LinkedIn and content is empty
+    if (
+        url
+        and url.startswith("http")
+        and "linkedin.com" not in url
+        and len(content.strip()) < 50
+        and len(summary.strip()) < 50
+    ):
+        try:
+            extracted_text = extract_full_text_from_url(url)
+            if extracted_text:
+                content = extracted_text
+        except Exception:
+            pass
 
     text_for_ai = content if len(content.strip()) > 100 else summary
     if not text_for_ai:
@@ -410,13 +422,72 @@ def article_chat_endpoint(req: ArticleChatRequest):
 
 @app.post("/api/ai/sentiment")
 def sentiment_radar_endpoint(req: SentimentRequest):
+    entity_clean = req.entity.strip()
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM articles WHERE is_archived = 0 ORDER BY created_at DESC LIMIT 50")
-    articles = [dict(r) for r in cursor.fetchall()]
+
+    # 1. Fetch latest previous snapshot for this entity (if any)
+    cursor.execute(
+        """
+        SELECT * FROM sentiment_reports
+        WHERE LOWER(entity) = LOWER(?)
+        ORDER BY created_at DESC LIMIT 1
+        """,
+        (entity_clean,),
+    )
+    prev_row = cursor.fetchone()
+    prev_report = dict(prev_row) if prev_row else None
+
+    # 2. Analyze fresh from scratch with Google Search grounding
+    res = analyze_sentiment_radar(entity_clean)
+
+    # 3. If previous snapshot exists, compare evolution
+    evolution_note = ""
+    client = get_vertex_client()
+    if prev_report and client:
+        evolution_note = compare_sentiment_evolution(client, entity_clean, prev_report, res)
+    res["evolution_note"] = evolution_note
+
+    # 4. AUTO-SAVE snapshot to SQLite database
+    pros_json = json.dumps(res.get("pros") or [], ensure_ascii=False)
+    cons_json = json.dumps(res.get("cons") or [], ensure_ascii=False)
+    sources_json = json.dumps(res.get("sources") or [], ensure_ascii=False)
+
+    cursor.execute(
+        """
+        INSERT INTO sentiment_reports (entity, sentiment_score, sentiment_label, summary, news_and_trends, evolution_note, pros_json, cons_json, sources_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            entity_clean,
+            res.get("sentiment_score", 50),
+            res.get("sentiment_label", "Neutre"),
+            res.get("summary", ""),
+            res.get("news_and_trends", ""),
+            evolution_note,
+            pros_json,
+            cons_json,
+            sources_json,
+        ),
+    )
+    snapshot_id = cursor.lastrowid
+    conn.commit()
+
+    # 5. Fetch all historical snapshots for date selector
+    cursor.execute(
+        """
+        SELECT id, created_at, sentiment_score, sentiment_label
+        FROM sentiment_reports
+        WHERE LOWER(entity) = LOWER(?)
+        ORDER BY created_at DESC
+        """,
+        (entity_clean,),
+    )
+    snapshots = [dict(s) for s in cursor.fetchall()]
     conn.close()
 
-    res = analyze_sentiment_radar(req.entity, articles)
+    res["id"] = snapshot_id
+    res["available_snapshots"] = snapshots
     return res
 
 
@@ -429,37 +500,24 @@ def save_sentiment_report(req: SentimentReportCreate):
     cons_json = json.dumps(req.cons or [], ensure_ascii=False)
     sources_json = json.dumps(req.sources or [], ensure_ascii=False)
 
-    cursor.execute("SELECT id FROM sentiment_reports WHERE LOWER(entity) = LOWER(?)", (req.entity.strip(),))
-    existing = cursor.fetchone()
-
-    if existing:
-        report_id = existing["id"]
-        cursor.execute(
-            """
-            UPDATE sentiment_reports
-            SET sentiment_score = ?, sentiment_label = ?, summary = ?, pros_json = ?, cons_json = ?, sources_json = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-            """,
-            (req.sentiment_score, req.sentiment_label, req.summary, pros_json, cons_json, sources_json, report_id),
-        )
-    else:
-        cursor.execute(
-            """
-            INSERT INTO sentiment_reports (entity, sentiment_score, sentiment_label, summary, pros_json, cons_json, sources_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                req.entity.strip(),
-                req.sentiment_score,
-                req.sentiment_label,
-                req.summary,
-                pros_json,
-                cons_json,
-                sources_json,
-            ),
-        )
-        report_id = cursor.lastrowid
-
+    cursor.execute(
+        """
+        INSERT INTO sentiment_reports (entity, sentiment_score, sentiment_label, summary, news_and_trends, evolution_note, pros_json, cons_json, sources_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            req.entity.strip(),
+            req.sentiment_score,
+            req.sentiment_label,
+            req.summary,
+            req.news_and_trends or "",
+            req.evolution_note or "",
+            pros_json,
+            cons_json,
+            sources_json,
+        ),
+    )
+    report_id = cursor.lastrowid
     conn.commit()
     cursor.execute("SELECT * FROM sentiment_reports WHERE id = ?", (report_id,))
     row = dict(cursor.fetchone())
@@ -475,35 +533,86 @@ def save_sentiment_report(req: SentimentReportCreate):
 def list_sentiment_reports():
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM sentiment_reports ORDER BY updated_at DESC")
+    cursor.execute("SELECT * FROM sentiment_reports ORDER BY created_at DESC")
     rows = cursor.fetchall()
     conn.close()
 
-    results = []
+    entities_map = {}
     for r in rows:
         d = dict(r)
         d["pros"] = json.loads(d.get("pros_json") or "[]")
         d["cons"] = json.loads(d.get("cons_json") or "[]")
         d["sources"] = json.loads(d.get("sources_json") or "[]")
-        results.append(d)
-    return results
+
+        e_key = d["entity"].strip().lower()
+        if e_key not in entities_map:
+            entities_map[e_key] = {
+                "entity": d["entity"],
+                "latest_snapshot": d,
+                "snapshots_count": 0,
+                "snapshots": [],
+            }
+        entities_map[e_key]["snapshots_count"] += 1
+        entities_map[e_key]["snapshots"].append(
+            {
+                "id": d["id"],
+                "created_at": d["created_at"],
+                "sentiment_score": d["sentiment_score"],
+                "sentiment_label": d["sentiment_label"],
+            }
+        )
+
+    return list(entities_map.values())
 
 
 @app.get("/api/sentiment/reports/{entity}")
 def get_sentiment_report(entity: str):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM sentiment_reports WHERE LOWER(entity) = LOWER(?)", (entity.strip(),))
+    cursor.execute(
+        "SELECT * FROM sentiment_reports WHERE LOWER(entity) = LOWER(?) ORDER BY created_at DESC LIMIT 1",
+        (entity.strip(),),
+    )
     row = cursor.fetchone()
-    conn.close()
-
     if not row:
+        conn.close()
         raise HTTPException(status_code=404, detail="Rapport non trouvé")
 
     res = dict(row)
     res["pros"] = json.loads(res.get("pros_json") or "[]")
     res["cons"] = json.loads(res.get("cons_json") or "[]")
     res["sources"] = json.loads(res.get("sources_json") or "[]")
+
+    cursor.execute(
+        "SELECT id, created_at, sentiment_score, sentiment_label FROM sentiment_reports WHERE LOWER(entity) = LOWER(?) ORDER BY created_at DESC",
+        (entity.strip(),),
+    )
+    res["available_snapshots"] = [dict(s) for s in cursor.fetchall()]
+    conn.close()
+    return res
+
+
+@app.get("/api/sentiment/reports/snapshot/{snapshot_id}")
+def get_sentiment_snapshot(snapshot_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM sentiment_reports WHERE id = ?", (snapshot_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Snapshot introuvable")
+
+    res = dict(row)
+    res["pros"] = json.loads(res.get("pros_json") or "[]")
+    res["cons"] = json.loads(res.get("cons_json") or "[]")
+    res["sources"] = json.loads(res.get("sources_json") or "[]")
+
+    cursor.execute(
+        "SELECT id, created_at, sentiment_score, sentiment_label FROM sentiment_reports WHERE LOWER(entity) = LOWER(?) ORDER BY created_at DESC",
+        (res["entity"].strip(),),
+    )
+    res["available_snapshots"] = [dict(s) for s in cursor.fetchall()]
+    conn.close()
     return res
 
 
@@ -515,6 +624,16 @@ def delete_sentiment_report(report_id: int):
     conn.commit()
     conn.close()
     return {"status": "success", "id": report_id}
+
+
+@app.delete("/api/sentiment/reports/entity/{entity}")
+def delete_sentiment_entity_reports(entity: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM sentiment_reports WHERE LOWER(entity) = LOWER(?)", (entity.strip(),))
+    conn.commit()
+    conn.close()
+    return {"status": "success", "entity": entity}
 
 
 @app.get("/api/articles")

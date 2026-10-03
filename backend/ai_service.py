@@ -20,7 +20,8 @@ def get_vertex_client():
         return _vertex_client
 
     try:
-        credentials, project_id = google.auth.default()
+        credentials, default_project = google.auth.default()
+        project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT") or default_project
         _vertex_client = genai.Client(vertexai=True, project=project_id, location="us-central1")
         return _vertex_client
     except Exception as e:
@@ -29,10 +30,10 @@ def get_vertex_client():
 
 
 def generate_with_gemini(client, prompt: str, requested_model: Optional[str] = None):
-    """Generates content using requested model with fallback to available Gemini Flash models."""
-    models_to_try = [
-        m for m in [requested_model, GEMINI_MODEL, "gemini-3.8-flash", "gemini-2.5-flash", "gemini-1.5-flash"] if m
-    ]
+    """Generates content using requested model with 429 retry backoff and valid fallback models."""
+    import time
+
+    models_to_try = [m for m in [requested_model, GEMINI_MODEL, "gemini-2.5-flash", "gemini-2.5-pro"] if m]
 
     seen = set()
     unique_models = []
@@ -43,12 +44,18 @@ def generate_with_gemini(client, prompt: str, requested_model: Optional[str] = N
 
     last_error = None
     for model_name in unique_models:
-        try:
-            res = client.models.generate_content(model=model_name, contents=prompt)
-            return res.text.strip(), model_name
-        except Exception as e:
-            last_error = e
-            print(f"Model {model_name} failed, trying fallback...", e)
+        for attempt in range(2):
+            try:
+                res = client.models.generate_content(model=model_name, contents=prompt)
+                return res.text.strip(), model_name
+            except Exception as e:
+                last_error = e
+                err_str = str(e)
+                if ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str) and attempt == 0:
+                    time.sleep(1.5)
+                    continue
+                print(f"Model {model_name} failed (attempt {attempt + 1}):", err_str[:120])
+                break
 
     raise last_error or Exception("All Gemini models failed.")
 
@@ -326,8 +333,21 @@ Réponds UNIQUEMENT avec un JSON contenant une liste de 4 chaînes de caractère
     ]
 
 
-def analyze_sentiment_radar(entity: str, articles: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Deep Research sentiment analysis: generates dynamic multi-faceted queries, extracts rich web evidence, and synthesizes nuanced pros/cons."""
+def unwrap_redirect_url(url: str) -> str:
+    """Unwraps vertexaisearch.cloud.google.com grounding redirects into clean, permanent canonical URLs."""
+    if not url or "grounding-api-redirect" not in url:
+        return url
+    try:
+        r = requests.head(url, allow_redirects=False, timeout=2)
+        if r.status_code in [301, 302, 303, 307, 308] and "Location" in r.headers:
+            return r.headers["Location"]
+    except Exception:
+        pass
+    return url
+
+
+def analyze_sentiment_radar(entity: str, articles: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """Deep Research sentiment analysis using native Google Search grounding with canonical un-redirected sources."""
     client = get_vertex_client()
     if not client:
         return {
@@ -335,122 +355,122 @@ def analyze_sentiment_radar(entity: str, articles: List[Dict[str, Any]]) -> Dict
             "sentiment_score": 50,
             "sentiment_label": "Neutre / IA Indisponible",
             "summary": "Analyse de sentiment indisponible.",
-            "pros": ["• **Analyse** : Service IA indisponible."],
-            "cons": ["• **Analyse** : Service IA indisponible."],
+            "news_and_trends": "Service d'analyse indisponible.",
+            "pros": [{"point": "• **Analyse** : Service IA indisponible.", "sources": []}],
+            "cons": [{"point": "• **Analyse** : Service IA indisponible.", "sources": []}],
             "sources": [],
         }
 
-    # 1. Gather context from internal watch feed
-    internal_snippets = []
-    e_lower = entity.lower()
-    matching_articles = []
-    for a in articles:
-        t = (a.get("title") or "").lower()
-        s = (a.get("summary") or "").lower()
-        c = (a.get("content") or "").lower()
-        if e_lower in t or e_lower in s or e_lower in c:
-            matching_articles.append(a)
-            internal_snippets.append(f"- [{a.get('site_name') or 'Veille'}] {a.get('title')}: {s[:300]}")
+    from google.genai import types
 
-    # 2. Dynamic Deep Research Web Queries (positive + adversarial negative)
-    search_queries = generate_radar_search_queries(client, entity)
-    web_sources_list = []
-    seen_urls = set()
-
-    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
-
-    # Add internal matching articles to candidate sources
-    for i, a in enumerate(matching_articles[:4], 1):
-        web_sources_list.append(
-            {
-                "id": len(web_sources_list) + 1,
-                "title": a.get("title") or "Article Veille",
-                "url": a.get("url") or f"http://127.0.0.1:8000/?article={a.get('id')}",
-                "snippet": (a.get("summary") or a.get("content") or "")[:400],
-                "type": "Veille locale",
-            }
-        )
-
-    for sq in search_queries:
-        try:
-            search_url = f"https://html.duckduckgo.com/html/?q={quote(sq)}"
-            res = requests.get(search_url, headers=headers, timeout=4)
-            if res.status_code == 200:
-                soup = BeautifulSoup(res.text, "html.parser")
-                results = soup.find_all("div", class_="result__body")
-                for r in results[:4]:
-                    snippet_el = r.find("a", class_="result__snippet")
-                    title_el = r.find("a", class_="result__a") or r.find("a", class_="result__url")
-                    if snippet_el and title_el:
-                        url = title_el.get("href")
-                        title = title_el.get_text().strip()
-                        snippet = snippet_el.get_text().strip()
-                        if url and url not in seen_urls and len(snippet) > 20:
-                            seen_urls.add(url)
-                            web_sources_list.append(
-                                {
-                                    "id": len(web_sources_list) + 1,
-                                    "title": title[:100],
-                                    "url": url,
-                                    "snippet": snippet,
-                                    "type": "Web",
-                                }
-                            )
-        except Exception as e:
-            print(f"Search error for query '{sq}':", e)
-
-    # Format numbered sources context for Gemini
-    sources_text_block = "\n".join(
-        [f"[{s['id']}] {s['title']} ({s['url']}) :\n{s['snippet']}" for s in web_sources_list[:16]]
-    )
-
-    prompt = f"""Tu es un analyste stratégique senior de haut niveau (type cabinet d'intelligence économique et analyste tech).
-Tu effectues une étude d'opinion et d'impact rigoureuse, sans concession et nuancée sur : "{entity}".
-
-Voici les sources contextuelles issues de l'investigation contradictoire (veille locale + web pros/cons/controverses) :
-{sources_text_block[:12000]}
+    prompt = f"""Tu es un analyste stratégique senior de haut niveau (intelligence économique et tech).
+Effectue une étude d'opinion et de sentiment approfondie, objective et sans concession sur : "{entity}".
+Utilise l'outil de recherche Google pour trouver les toutes dernières actualités, les débats récents, les avis de la communauté (Reddit, Hacker News, presse tech), les controverses et les points forts. Ne te base sur aucun flux interne, uniquement sur le web.
 
 Consignes impératives pour l'analyse :
-1. "sentiment_score" : Un entier entre 0 et 100 reflétant la balance globale d'opinion (ex: 60 = 60% positif / 40% négatif).
-2. "sentiment_label" : Libellé exact en français (ex: "Très Favorable", "Plutôt Favorable", "Mitigé / Contrasté", "Plutôt Critique").
-3. "summary" : Un résumé stratégique percutant en français (3 phrases riches) mettant en avant la tension principale entre ses atouts majeurs et ses réels défis.
-4. "pros" : 3 points forts / atouts majeurs réels et sourcés. Sois concret (ex: souveraineté européenne, appuis institutionnels/politiques, performance technique mesurée, adoption industrielle). Pour CHAQUE point fort, associe 1 ou 2 sources réelles issues de la liste ci-dessus avec leur titre et url.
-5. "cons" : 3 limites, controverses ou aspects limitants MAJEURS et réalistes. Les points limitants doivent être précis et étayés (ex: dérive vers du consulting/service au détriment de la R&D pure, manque de transparence, dépendance infrastructurelle, gouvernance contestée, réticences communauté). Ne sors JAMAIS de banalité creuse comme "marché compétitif" ou "doit faire ses preuves". Pour CHAQUE point faible, associe 1 ou 2 sources réelles issues de la liste ci-dessus avec leur titre et url.
+1. "sentiment_score" : Entier entre 0 et 100 (% d'avis positifs global).
+2. "sentiment_label" : Libellé exact ("Très Favorable", "Plutôt Favorable", "Mitigé / Contrasté", "Plutôt Critique").
+3. "summary" : Synthèse stratégique globale percutante en 2-3 phrases.
+4. "news_and_trends" : Un résumé détaillé (3-4 phrases) des DERNIÈRES ACTUALITÉS récentes et de CE QUI SE DIT actuellement sur {entity} (annonces récentes, recrutements, partenariats, rumeurs ou tendances dans la communauté).
+5. "pros" : 3 points forts / atouts majeurs réels et sourcés (commençant par "• **Titre** : ..."). Associe 1 ou 2 sources réelles avec leur titre.
+6. "cons" : 3 limites, controverses ou aspects limitants réels et étayés (ex: modèle économique, dépendances, pivots, critiques techniques). Ne donne pas de banalité creuse. Associe 1 ou 2 sources réelles avec leur titre.
 
-Format de réponse OBLIGATOIRE en JSON pur :
+Format de réponse EXCLUSIVEMENT en JSON pur :
 {{
   "entity": "{entity}",
-  "sentiment_score": 65,
+  "sentiment_score": 70,
   "sentiment_label": "Plutôt Favorable",
-  "summary": "Synthèse stratégique...",
+  "summary": "Synthèse globale...",
+  "news_and_trends": "Dernières actualités et ce qui se dit...",
   "pros": [
     {{
-      "point": "• **Titre 1** : Détail factuel...",
-      "sources": [
-        {{"title": "Titre source", "url": "https://..."}}
-      ]
+      "point": "• **Titre 1** : Détail...",
+      "sources": [{{"title": "Nom de la source"}}]
     }}
   ],
   "cons": [
     {{
-      "point": "• **Titre 1** : Détail factuel...",
-      "sources": [
-        {{"title": "Titre source", "url": "https://..."}}
-      ]
+      "point": "• **Titre 1** : Détail...",
+      "sources": [{{"title": "Nom de la source"}}]
     }}
   ]
 }}
 """
 
     try:
-        output, model_used = generate_with_gemini(client, prompt)
-        output = re.sub(r"^```json\s*", "", output)
-        output = re.sub(r"^```\s*", "", output)
-        output = re.sub(r"\s*```$", "", output)
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(tools=[types.Tool(google_search=types.GoogleSearch())]),
+        )
 
-        data = json.loads(output)
-        data["sources"] = web_sources_list[:8]
+        text = response.text or ""
+        text = re.sub(r"^```json\s*", "", text)
+        text = re.sub(r"^```\s*", "", text)
+        text = re.sub(r"\s*```$", "", text)
+
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            text = match.group(0)
+
+        data = json.loads(text)
+
+        # Collect verified canonical web sources from grounding metadata
+        grounded_sources = []
+        if response.candidates and hasattr(response.candidates[0], "grounding_metadata"):
+            gm = response.candidates[0].grounding_metadata
+            for chunk in getattr(gm, "grounding_chunks", []) or []:
+                if getattr(chunk, "web", None):
+                    raw_uri = chunk.web.uri or ""
+                    clean_url = unwrap_redirect_url(raw_uri)
+                    title = chunk.web.title or "Source Web"
+                    if clean_url and clean_url != "#":
+                        grounded_sources.append({"title": title, "url": clean_url})
+
+        # Sanitize and bind canonical URLs to pros & cons sources
+        for category in ["pros", "cons"]:
+            for item in data.get(category, []):
+                if isinstance(item, dict):
+                    sources = item.get("sources", [])
+                    cleaned_sources = []
+                    for s in sources:
+                        url = s.get("url", "")
+                        title = s.get("title", "")
+                        if "grounding-api-redirect" in url:
+                            url = unwrap_redirect_url(url)
+                        # If URL is still a broken redirect or missing, match with a grounded source
+                        if not url or "grounding-api-redirect" in url or url == "#":
+                            matched = next(
+                                (
+                                    gs
+                                    for gs in grounded_sources
+                                    if gs["title"].lower() in title.lower() or title.lower() in gs["title"].lower()
+                                ),
+                                None,
+                            )
+                            if matched:
+                                url = matched["url"]
+                                if not title or title == "Nom de la source":
+                                    title = matched["title"]
+                            elif grounded_sources:
+                                # Fall back to first available verified source
+                                fallback_gs = grounded_sources[len(cleaned_sources) % len(grounded_sources)]
+                                url = fallback_gs["url"]
+                                if not title or title == "Nom de la source":
+                                    title = fallback_gs["title"]
+                        if url and url != "#":
+                            cleaned_sources.append({"title": title or "Source Web", "url": url})
+                    # If item had no sources, assign one from grounded_sources
+                    if not cleaned_sources and grounded_sources:
+                        fallback_gs = grounded_sources[len(cleaned_sources) % len(grounded_sources)]
+                        cleaned_sources.append({"title": fallback_gs["title"], "url": fallback_gs["url"]})
+                    item["sources"] = cleaned_sources
+
+        data["sources"] = grounded_sources[:8]
+        if "news_and_trends" not in data:
+            data["news_and_trends"] = ""
         return data
+
     except Exception as e:
         print("Sentiment analysis failed:", e)
         return {
@@ -458,7 +478,41 @@ Format de réponse OBLIGATOIRE en JSON pur :
             "sentiment_score": 50,
             "sentiment_label": "Mitigé / Analyse Partielle",
             "summary": f"Opinion globale recueillie sur {entity}.",
-            "pros": [f"• **Intérêt** : Forte visibilité de {entity} sur le marché."],
-            "cons": ["• **Vigilance** : Sujet complexe nécessitant une analyse approfondie."],
+            "news_and_trends": f"Actualités récentes en cours de consolidation pour {entity}.",
+            "evolution_note": "",
+            "pros": [{"point": f"• **Intérêt** : Forte visibilité de {entity} sur le marché.", "sources": []}],
+            "cons": [{"point": "• **Vigilance** : Sujet complexe nécessitant une analyse approfondie.", "sources": []}],
             "sources": [],
         }
+
+
+def compare_sentiment_evolution(client, entity: str, prev_report: Dict[str, Any], new_report: Dict[str, Any]) -> str:
+    """Compares a previous snapshot against a newly generated one and produces an informative evolution note."""
+    if not prev_report:
+        return ""
+
+    prev_date = (prev_report.get("created_at") or "la précédente analyse")[:16].replace("T", " ")
+    prev_summary = prev_report.get("summary") or ""
+    prev_news = prev_report.get("news_and_trends") or ""
+    new_summary = new_report.get("summary") or ""
+    new_news = new_report.get("news_and_trends") or ""
+
+    prompt = f"""Tu es un analyste de veille stratégique.
+Compare la situation actuelle de "{entity}" avec son analyse précédente datant du {prev_date}.
+
+Ancienne situation ({prev_date}) :
+Résumé : {prev_summary}
+Actualités : {prev_news}
+
+Nouvelle situation actuelle :
+Résumé : {new_summary}
+Actualités : {new_news}
+
+Rédige une courte note d'évolution percutante (2 à 3 phrases claires) expliquant si la situation a changé depuis la dernière prise d'information, quels événements nouveaux ont eu lieu ou si de nouvelles controverses/opportunités sont apparues. N'affiche pas de calcul mathématique ou delta numérique, décris directement les faits concrets et la dynamique d'évolution.
+"""
+    try:
+        note, _ = generate_with_gemini(client, prompt)
+        return note.strip()
+    except Exception as e:
+        print("Evolution comparison error:", e)
+        return ""
