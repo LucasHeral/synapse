@@ -1,7 +1,7 @@
 .PHONY: install sync dev run test lint format precommit docs-build docs-serve docs-deploy clean
 
-UV = /Users/lucas.heral/.local/bin/uv
-VENV_BIN = $(CURDIR)/.venv/bin
+UV ?= uv
+VENV_BIN ?= $(CURDIR)/.venv/bin
 
 # Default target
 all: install
