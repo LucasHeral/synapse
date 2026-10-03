@@ -2,22 +2,26 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://LucasHeral.github.io/synapse/</loc>
-         <lastmod>2026-09-30</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://LucasHeral.github.io/synapse/api-reference/</loc>
-         <lastmod>2026-09-30</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://LucasHeral.github.io/synapse/architecture/</loc>
-         <lastmod>2026-09-30</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://LucasHeral.github.io/synapse/chrome-extension/</loc>
-         <lastmod>2026-09-30</lastmod>
+         <lastmod>2026-10-03</lastmod>
     </url>
     <url>
          <loc>https://LucasHeral.github.io/synapse/dashboard/</loc>
-         <lastmod>2026-09-30</lastmod>
+         <lastmod>2026-10-03</lastmod>
+    </url>
+    <url>
+         <loc>https://LucasHeral.github.io/synapse/solutions/integration-issues/chrome-extension-mv3-content-script-listener-collisions/</loc>
+         <lastmod>2026-10-03</lastmod>
     </url>
 </urlset>

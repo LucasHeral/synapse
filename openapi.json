@@ -497,6 +497,43 @@
         }
       }
     },
+    "/api/sentiment/reports/snapshot/{snapshot_id}": {
+      "get": {
+        "summary": "Get Sentiment Snapshot",
+        "operationId": "get_sentiment_snapshot_api_sentiment_reports_snapshot__snapshot_id__get",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sentiment/reports/{report_id}": {
       "delete": {
         "summary": "Delete Sentiment Report",
@@ -509,6 +546,43 @@
             "schema": {
               "type": "integer",
               "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sentiment/reports/entity/{entity}": {
+      "delete": {
+        "summary": "Delete Sentiment Entity Reports",
+        "operationId": "delete_sentiment_entity_reports_api_sentiment_reports_entity__entity__delete",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entity"
             }
           }
         ],
@@ -1127,6 +1201,30 @@
           "summary": {
             "type": "string",
             "title": "Summary"
+          },
+          "news_and_trends": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "News And Trends",
+            "default": ""
+          },
+          "evolution_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evolution Note",
+            "default": ""
           },
           "pros": {
             "anyOf": [
