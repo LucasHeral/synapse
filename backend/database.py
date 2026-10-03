@@ -57,6 +57,30 @@ def init_db():
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_entity_date ON sentiment_reports(entity, created_at)")
 
+    # Create chat_conversations and chat_messages tables
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS chat_conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_conversations_updated ON chat_conversations(updated_at DESC)")
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id INTEGER NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            sources_json TEXT DEFAULT '[]',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_conv ON chat_messages(conversation_id, created_at)")
+
     conn.commit()
     conn.close()
 

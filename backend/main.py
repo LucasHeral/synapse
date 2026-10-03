@@ -27,7 +27,17 @@ from pydantic import BaseModel
 
 class ChatRequest(BaseModel):
     query: str
+    conversation_id: Optional[int] = None
     model: Optional[str] = None
+    web_search: Optional[bool] = False
+
+
+class ChatConversationCreate(BaseModel):
+    title: Optional[str] = "Nouvelle conversation"
+
+
+class ChatConversationUpdate(BaseModel):
+    title: str
 
 
 class ArticleChatRequest(BaseModel):
@@ -372,10 +382,101 @@ def generate_newsletter_endpoint(req: Optional[NewsletterRequest] = None):
     return {"newsletter_markdown": markdown_res, "articles_count": len(rows)}
 
 
+@app.get("/api/chat/conversations")
+def get_conversations_endpoint():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT c.*, COUNT(m.id) as message_count
+        FROM chat_conversations c
+        LEFT JOIN chat_messages m ON c.id = m.conversation_id
+        GROUP BY c.id
+        ORDER BY c.updated_at DESC
+    """)
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+@app.post("/api/chat/conversations")
+def create_conversation_endpoint(req: ChatConversationCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO chat_conversations (title) VALUES (?)",
+        (req.title or "Nouvelle conversation",),
+    )
+    conn.commit()
+    conv_id = cursor.lastrowid
+    cursor.execute("SELECT * FROM chat_conversations WHERE id = ?", (conv_id,))
+    conv = dict(cursor.fetchone())
+    conv["messages"] = []
+    conn.close()
+    return conv
+
+
+@app.get("/api/chat/conversations/{conversation_id}")
+def get_conversation_details_endpoint(conversation_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM chat_conversations WHERE id = ?", (conversation_id,))
+    conv_row = cursor.fetchone()
+    if not conv_row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Conversation introuvable")
+    conv = dict(conv_row)
+    cursor.execute(
+        "SELECT * FROM chat_messages WHERE conversation_id = ? ORDER BY created_at ASC",
+        (conversation_id,),
+    )
+    messages = []
+    for r in cursor.fetchall():
+        m = dict(r)
+        m["sources"] = json.loads(m.get("sources_json") or "[]")
+        messages.append(m)
+    conv["messages"] = messages
+    conn.close()
+    return conv
+
+
+@app.delete("/api/chat/conversations/{conversation_id}")
+def delete_conversation_endpoint(conversation_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM chat_messages WHERE conversation_id = ?", (conversation_id,))
+    cursor.execute("DELETE FROM chat_conversations WHERE id = ?", (conversation_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "success", "message": "Conversation supprimée"}
+
+
 @app.post("/api/ai/chat")
 def chat_kb_endpoint(req: ChatRequest):
     conn = get_db_connection()
     cursor = conn.cursor()
+
+    conv_id = req.conversation_id
+    if not conv_id:
+        title = req.query.strip().replace("\n", " ")[:40]
+        cursor.execute("INSERT INTO chat_conversations (title) VALUES (?)", (title or "Nouvelle discussion",))
+        conn.commit()
+        conv_id = cursor.lastrowid
+
+    # Record user message in DB
+    cursor.execute(
+        "INSERT INTO chat_messages (conversation_id, role, content) VALUES (?, 'user', ?)",
+        (conv_id, req.query),
+    )
+    conn.commit()
+
+    # Retrieve conversation history
+    cursor.execute(
+        "SELECT role, content FROM chat_messages WHERE conversation_id = ? ORDER BY created_at ASC",
+        (conv_id,),
+    )
+    history = [dict(r) for r in cursor.fetchall()]
+
+    # Fetch knowledge base articles
     cursor.execute("SELECT * FROM articles WHERE is_archived = 0 ORDER BY created_at DESC LIMIT 50")
     articles = [dict(r) for r in cursor.fetchall()]
 
@@ -398,9 +499,25 @@ def chat_kb_endpoint(req: ChatRequest):
                 "url": f"/?radar={d['entity']}",
             }
         )
+
+    res = answer_rag_question(
+        req.query,
+        articles,
+        conversation_history=history,
+        web_search=bool(req.web_search),
+        model=req.model,
+    )
+
+    # Save assistant message & sources in DB
+    cursor.execute(
+        "INSERT INTO chat_messages (conversation_id, role, content, sources_json) VALUES (?, 'assistant', ?, ?)",
+        (conv_id, res.get("answer", ""), json.dumps(res.get("sources", []))),
+    )
+    cursor.execute("UPDATE chat_conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (conv_id,))
+    conn.commit()
     conn.close()
 
-    res = answer_rag_question(req.query, articles, model=req.model)
+    res["conversation_id"] = conv_id
     return res
 
 

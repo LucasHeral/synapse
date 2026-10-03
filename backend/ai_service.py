@@ -9,6 +9,7 @@ import requests
 import trafilatura
 from bs4 import BeautifulSoup
 from google import genai
+from google.genai import types
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 _vertex_client = None
@@ -182,10 +183,16 @@ Rédige dans un style fluide, professionnel et engageant. N'invente pas de faux 
         return f"# 📰 Newsletter Veille Technologique\n\nErreur lors de la génération IA: {str(e)}"
 
 
-def answer_rag_question(query: str, articles: List[Dict[str, Any]], model: Optional[str] = None) -> Dict[str, Any]:
-    """Answers user queries across the whole knowledge base using Vertex AI Gemini with cited sources."""
+def answer_rag_question(
+    query: str,
+    articles: List[Dict[str, Any]],
+    conversation_history: Optional[List[Dict[str, str]]] = None,
+    web_search: bool = False,
+    model: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Answers user queries across the whole knowledge base with optional Web Search grounding and conversational memory."""
     client = get_vertex_client()
-    if not articles:
+    if not articles and not web_search:
         return {
             "answer": "Votre base de veille est actuellement vide. Ajoutez des articles pour pouvoir poser des questions !",
             "sources": [],
@@ -209,36 +216,111 @@ def answer_rag_question(query: str, articles: List[Dict[str, Any]], model: Optio
 
     kb_str = json.dumps(kb_items, ensure_ascii=False, indent=2)
 
-    prompt = f"""Tu es le Chatbot IA de Veille Technologique "Synapse AI".
-Voici l'ensemble de la base de connaissance de l'utilisateur (articles, posts LinkedIn, actus) :
+    # Format previous conversation history turns
+    history_str = ""
+    if conversation_history and len(conversation_history) > 0:
+        history_lines = []
+        for msg in conversation_history[-10:]:
+            role = "Utilisateur" if msg.get("role") == "user" else "Assistant Synapse"
+            history_lines.append(f"{role} : {msg.get('content', '')}")
+        history_str = "Historique récent de la discussion en cours :\n" + "\n".join(history_lines) + "\n\n"
 
+    if web_search:
+        prompt = f"""Tu es le Chatbot IA de Veille Technologique "Synapse AI".
+Tu disposes à la fois de la base de connaissances personnelle de l'utilisateur et d'un outil de recherche Google en direct.
+
+{history_str}Base de connaissances locale de l'utilisateur (articles, posts, rapports) :
+{kb_str[:12000]}
+
+Question de l'utilisateur : "{query}"
+
+Instructions de réponse :
+1. Réponds de façon précise, synthétique et structurée en français (utilise du Markdown riche : listes à puces, gras pour les termes clés).
+2. Approche HYBRIDE : Exploite en priorité les éléments de sa base de veille locale, et complète avec les dernières informations récentes et tendances du Web mondial grâce à la recherche.
+3. Cites explicitement tes sources (noms d'auteurs, titres d'articles ou noms des sites web consultés).
+"""
+    else:
+        prompt = f"""Tu es le Chatbot IA de Veille Technologique "Synapse AI".
+
+{history_str}Base de connaissances de l'utilisateur (articles, posts LinkedIn, rapports de veille) :
 {kb_str[:15000]}
 
 Question de l'utilisateur : "{query}"
 
-Instructions :
-1. Réponds de façon précise, synthétique et structurée en français.
-2. Basé TOUTE ta réponse sur les articles fournis dans la base de connaissance.
-3. Cite explicitement les auteurs ou titres des posts utilisés pour répondre.
-4. Si la base de connaissance ne contient pas l'information requise, réponds poliment que l'information n'est pas présente dans sa veille actuelle.
+Instructions de réponse :
+1. Réponds de façon précise, synthétique et structurée en français (utilise du Markdown soigné : listes à puces, gras pour les termes clés).
+2. Base ta réponse en priorité sur les articles fournis dans la base de connaissances ci-dessus.
+3. Cite explicitement les auteurs ou titres des articles et posts utilisés pour répondre.
+4. Si la base de connaissances ne contient pas l'information requise, réponds poliment que l'information n'est pas présente dans sa veille actuelle.
 """
 
     try:
-        answer, model_used = generate_with_gemini(client, prompt, model)
-
-        # Identify relevant sources
         sources = []
+        target_model = model or GEMINI_MODEL
+
+        if web_search and client:
+            # Generate with Google Search Grounding tool
+            response = client.models.generate_content(
+                model=target_model,
+                contents=prompt,
+                config=types.GenerateContentConfig(tools=[types.Tool(google_search=types.GoogleSearch())]),
+            )
+            answer = response.text or ""
+            model_used = f"{target_model} (Web Search)"
+
+            # Extract grounded web sources
+            if response.candidates and hasattr(response.candidates[0], "grounding_metadata"):
+                gm = response.candidates[0].grounding_metadata
+                for chunk in getattr(gm, "grounding_chunks", []) or []:
+                    if getattr(chunk, "web", None):
+                        raw_uri = chunk.web.uri or ""
+                        clean_url = unwrap_redirect_url(raw_uri)
+                        title = chunk.web.title or "Source Web"
+                        if clean_url and clean_url != "#":
+                            domain = clean_url.split("/")[2].replace("www.", "") if "/" in clean_url else "Web"
+                            sources.append(
+                                {
+                                    "id": "web",
+                                    "title": title,
+                                    "author": "Google Web Search",
+                                    "url": clean_url,
+                                    "site_name": domain,
+                                    "category": "Web Mondial",
+                                }
+                            )
+        else:
+            answer, model_used = generate_with_gemini(client, prompt, model)
+
+        # Match cited or relevant local articles
+        ans_lower = answer.lower()
         q_lower = query.lower()
         for a in articles:
             t = (a.get("title") or "").lower()
             s = (a.get("summary") or "").lower()
             aut = (a.get("author") or "").lower()
-            if any(w in t or w in s or w in aut for w in q_lower.split() if len(w) > 3):
-                sources.append(
-                    {"id": a.get("id"), "title": a.get("title"), "author": a.get("author"), "url": a.get("url")}
-                )
+            aid = str(a.get("id") or "")
 
-        return {"answer": answer, "sources": sources[:5], "model_used": model_used}
+            is_cited = (
+                (t and (t[:25] in ans_lower or (len(t) > 10 and t[-20:] in ans_lower)))
+                or (aid and (f"id {aid}" in ans_lower or f"id: {aid}" in ans_lower))
+                or (aut and len(aut) > 3 and aut in ans_lower)
+            )
+            is_relevant = any(w in t or w in s or w in aut for w in q_lower.split() if len(w) > 3)
+
+            if is_cited or is_relevant:
+                if not any(src.get("id") == a.get("id") for src in sources):
+                    sources.append(
+                        {
+                            "id": a.get("id"),
+                            "title": a.get("title"),
+                            "author": a.get("author"),
+                            "url": a.get("url"),
+                            "site_name": a.get("site_name") or "Veille",
+                            "category": a.get("category") or "Tech & IA",
+                        }
+                    )
+
+        return {"answer": answer, "sources": sources[:8], "model_used": model_used}
     except Exception as e:
         return {"answer": f"Erreur lors de l'analyse IA : {str(e)}", "sources": [], "model_used": "error"}
 

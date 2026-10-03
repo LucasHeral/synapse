@@ -45,3 +45,18 @@ class SentimentReportCreate(BaseModel):
     pros: Optional[List[Any]] = []
     cons: Optional[List[Any]] = []
     sources: Optional[List[dict]] = []
+
+
+class ChatConversationCreate(BaseModel):
+    title: Optional[str] = "Nouvelle conversation"
+
+
+class ChatConversationUpdate(BaseModel):
+    title: str
+
+
+class ChatRequest(BaseModel):
+    query: str
+    conversation_id: Optional[int] = None
+    model: Optional[str] = None
+    web_search: Optional[bool] = False
