@@ -9,6 +9,7 @@ from ai_service import (
     analyze_sentiment_radar,
     answer_article_question,
     answer_rag_question,
+    classify_category_zero_shot,
     compare_sentiment_evolution,
     extract_full_text_from_url,
     generate_ai_summary_and_tags,
@@ -86,43 +87,7 @@ app.add_middleware(
 
 
 def auto_detect_category(url: str, title: str = "", summary: str = "", site_name: str = "") -> str:
-    text = f"{title} {summary} {url} {site_name}".lower()
-
-    if "linkedin.com" in url.lower() or "linkedin" in site_name.lower():
-        return "LinkedIn"
-    if any(
-        k in text
-        for k in ["ai", "ia", "llm", "gpt", "claude", "gemini", "machine learning", "deep learning", "neural", "prompt"]
-    ):
-        return "IA & Data"
-    if any(
-        k in text
-        for k in [
-            "python",
-            "javascript",
-            "react",
-            "vue",
-            "code",
-            "dev",
-            "github",
-            "api",
-            "architecture",
-            "backend",
-            "frontend",
-            "rust",
-        ]
-    ):
-        return "Dev & Tech"
-    if any(
-        k in text for k in ["business", "startup", "vc", "saaS", "marketing", "finance", "strategy", "mrr", "growth"]
-    ):
-        return "Business & SaaS"
-    if any(k in text for k in ["design", "ui", "ux", "css", "figma"]):
-        return "Design & UX"
-    if any(k in text for k in ["cybersecurity", "security", "privacy", "hack"]):
-        return "Sécurité"
-
-    return "Général"
+    return classify_category_zero_shot(url=url, title=title, summary=summary, site_name=site_name)
 
 
 @app.post("/api/extract")
