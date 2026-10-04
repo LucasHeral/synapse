@@ -12,9 +12,16 @@ from ai_service import (
     classify_category_zero_shot,
     compare_sentiment_evolution,
     extract_full_text_from_url,
+    extract_pdf_metadata_and_text,
+    extract_youtube_video_id,
+    fetch_arxiv_details,
     generate_ai_summary_and_tags,
     generate_weekly_newsletter,
     get_vertex_client,
+    get_youtube_transcript,
+    is_arxiv_url,
+    is_pdf_url,
+    is_youtube_url,
 )
 from bs4 import BeautifulSoup
 from database import get_db_connection, init_db
@@ -101,10 +108,107 @@ def extract_metadata(req: ExtractRequest):
         "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
     }
 
+    # 1. YouTube handling
+    if is_youtube_url(url):
+        video_id = extract_youtube_video_id(url)
+        transcript = get_youtube_transcript(video_id) if video_id else None
+
+        extracted = {
+            "url": url,
+            "title": "Vidéo YouTube",
+            "summary": "",
+            "content": transcript or "",
+            "site_name": "YouTube",
+            "author": "",
+            "image_url": f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg" if video_id else "",
+            "category": "Dev & Tech",
+        }
+        try:
+            response = requests.get(url, headers=headers, timeout=6)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, "html.parser")
+                og_title = soup.find("meta", property="og:title") or soup.find("meta", {"name": "twitter:title"})
+                if og_title and og_title.get("content"):
+                    extracted["title"] = og_title["content"].strip()
+                elif soup.title and soup.title.text:
+                    extracted["title"] = soup.title.text.strip().replace(" - YouTube", "")
+
+                og_desc = soup.find("meta", property="og:description") or soup.find("meta", {"name": "description"})
+                if og_desc and og_desc.get("content"):
+                    extracted["summary"] = og_desc["content"].strip()
+
+                meta_author = soup.find("link", itemprop="name") or soup.find("meta", property="og:site_name")
+                if meta_author and meta_author.get("content"):
+                    extracted["author"] = meta_author["content"].strip()
+        except Exception as e:
+            print("YouTube metadata scrape error:", e)
+
+        if transcript:
+            if not extracted["summary"] or len(extracted["summary"]) < 20:
+                extracted["summary"] = transcript[:500] + "..."
+
+        extracted["category"] = auto_detect_category(
+            extracted["url"], extracted["title"], extracted["summary"], extracted["site_name"]
+        )
+        return extracted
+
+    # 2. arXiv handling
+    if is_arxiv_url(url):
+        details = fetch_arxiv_details(url)
+        extracted = {
+            "url": url,
+            "title": details.get("title") or "Papier arXiv",
+            "summary": details.get("summary") or "",
+            "content": details.get("content") or "",
+            "site_name": "arXiv",
+            "author": details.get("author") or "",
+            "image_url": "",
+            "category": "IA & Data",
+        }
+        extracted["category"] = auto_detect_category(
+            extracted["url"], extracted["title"], extracted["summary"], extracted["site_name"]
+        )
+        return extracted
+
+    # 3. Direct PDF handling
+    if is_pdf_url(url):
+        extracted = {
+            "url": url,
+            "title": "Document PDF",
+            "summary": "",
+            "content": "",
+            "site_name": "PDF",
+            "author": "",
+            "image_url": "",
+            "category": "Tech & IA",
+        }
+        try:
+            res = requests.get(url, headers=headers, timeout=10)
+            if res.status_code == 200 and res.content:
+                pdf_meta = extract_pdf_metadata_and_text(res.content)
+                extracted["content"] = pdf_meta.get("content", "")
+                if pdf_meta.get("title"):
+                    extracted["title"] = pdf_meta["title"]
+                else:
+                    filename = url.split("/")[-1]
+                    extracted["title"] = filename or "Document PDF"
+                if pdf_meta.get("author"):
+                    extracted["author"] = pdf_meta["author"]
+                extracted["summary"] = extracted["content"][:500] + "..." if extracted["content"] else "Document PDF"
+        except Exception as e:
+            extracted["summary"] = f"Extraction PDF impossible: {str(e)}"
+
+        extracted["category"] = auto_detect_category(
+            extracted["url"], extracted["title"], extracted["summary"], extracted["site_name"]
+        )
+        return extracted
+
+    # 4. Standard HTML Webpages
     extracted = {
         "url": url,
         "title": "",
         "summary": "",
+        "content": "",
         "site_name": "",
         "author": "",
         "image_url": "",

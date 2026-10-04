@@ -1,8 +1,9 @@
+import io
 import json
 import os
 import re
 from typing import Any, Dict, List, Optional
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 import google.auth
 import requests
@@ -61,10 +62,202 @@ def generate_with_gemini(client, prompt: str, requested_model: Optional[str] = N
     raise last_error or Exception("All Gemini models failed.")
 
 
+def is_youtube_url(url: str) -> bool:
+    if not url:
+        return False
+    parsed = urlparse(url)
+    domain = parsed.netloc.lower()
+    return "youtube.com" in domain or "youtu.be" in domain
+
+
+def extract_youtube_video_id(url: str) -> Optional[str]:
+    if not url:
+        return None
+    patterns = [
+        r"(?:v=|\/v\/|embed\/|youtu\.be\/|shorts\/)([a-zA-Z0-9_-]{11})",
+        r"v=([a-zA-Z0-9_-]{11})",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return None
+
+
+def get_youtube_transcript(video_id: str) -> Optional[str]:
+    try:
+        from youtube_transcript_api import YouTubeTranscriptApi
+
+        yt = YouTubeTranscriptApi()
+        try:
+            snippets = yt.fetch(video_id, languages=("fr", "en"))
+        except Exception:
+            try:
+                snippets = yt.fetch(video_id)
+            except Exception:
+                transcripts = yt.list(video_id)
+                first_t = next(iter(transcripts), None)
+                if not first_t:
+                    return None
+                snippets = first_t.fetch()
+
+        lines = []
+        for s in snippets:
+            txt = s.get("text", "") if isinstance(s, dict) else getattr(s, "text", str(s))
+            if txt and txt.strip():
+                lines.append(txt.strip())
+        return " ".join(lines) if lines else None
+    except Exception as e:
+        print(f"Error fetching YouTube transcript for {video_id}: {e}")
+        return None
+
+
+def is_arxiv_url(url: str) -> bool:
+    if not url:
+        return False
+    return "arxiv.org" in url.lower()
+
+
+def extract_arxiv_id(url: str) -> Optional[str]:
+    match = re.search(
+        r"arxiv\.org\/(?:abs|pdf)\/([0-9]+\.[0-9]+(?:v[0-9]+)?|[a-zA-Z\-]+(?:\.[a-zA-Z]+)?\/[0-9]+)",
+        url,
+        re.IGNORECASE,
+    )
+    if match:
+        arxiv_id = match.group(1)
+        if arxiv_id.endswith(".pdf"):
+            arxiv_id = arxiv_id[:-4]
+        return arxiv_id
+    return None
+
+
+def is_pdf_url(url: str) -> bool:
+    if not url:
+        return False
+    parsed = urlparse(url)
+    return parsed.path.lower().endswith(".pdf")
+
+
+def extract_pdf_text_from_bytes(pdf_bytes: bytes) -> str:
+    try:
+        from pypdf import PdfReader
+
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        pages_text = []
+        for page in reader.pages:
+            t = page.extract_text()
+            if t:
+                pages_text.append(t.strip())
+        return "\n\n".join(pages_text)
+    except Exception as e:
+        print("Error reading PDF bytes with pypdf:", e)
+        return ""
+
+
+def extract_pdf_metadata_and_text(pdf_bytes: bytes) -> Dict[str, str]:
+    res = {"title": "", "author": "", "content": ""}
+    try:
+        from pypdf import PdfReader
+
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        if reader.metadata:
+            res["title"] = reader.metadata.title or ""
+            res["author"] = reader.metadata.author or ""
+        pages_text = []
+        for page in reader.pages:
+            t = page.extract_text()
+            if t:
+                pages_text.append(t.strip())
+        res["content"] = "\n\n".join(pages_text)
+    except Exception as e:
+        print("Error extracting PDF metadata/text:", e)
+    return res
+
+
+def fetch_arxiv_details(url: str) -> Dict[str, str]:
+    arxiv_id = extract_arxiv_id(url)
+    res = {
+        "title": "",
+        "author": "",
+        "summary": "",
+        "content": "",
+        "site_name": "arXiv",
+        "category": "IA & Data",
+    }
+    if not arxiv_id:
+        return res
+
+    abs_url = f"https://arxiv.org/abs/{arxiv_id}"
+    pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+
+    try:
+        r = requests.get(abs_url, headers=headers, timeout=8)
+        if r.status_code == 200:
+            soup = BeautifulSoup(r.text, "html.parser")
+            title_el = soup.find("h1", class_="title")
+            if title_el:
+                res["title"] = re.sub(r"^Title:\s*", "", title_el.text, flags=re.IGNORECASE).strip()
+
+            authors_el = soup.find("div", class_="authors")
+            if authors_el:
+                res["author"] = re.sub(r"^Authors?:\s*", "", authors_el.text, flags=re.IGNORECASE).strip()
+
+            abstract_el = soup.find("blockquote", class_="abstract")
+            if abstract_el:
+                res["summary"] = re.sub(r"^Abstract:\s*", "", abstract_el.text, flags=re.IGNORECASE).strip()
+    except Exception as e:
+        print("Error fetching arXiv abstract page:", e)
+
+    try:
+        pdf_res = requests.get(pdf_url, headers=headers, timeout=12)
+        if pdf_res.status_code == 200 and pdf_res.content:
+            pdf_text = extract_pdf_text_from_bytes(pdf_res.content)
+            if pdf_text:
+                res["content"] = pdf_text
+    except Exception as e:
+        print("Error fetching arXiv PDF content:", e)
+
+    if not res["summary"] and res["content"]:
+        res["summary"] = res["content"][:500] + "..."
+
+    return res
+
+
 def extract_full_text_from_url(url: str) -> str:
-    """Extracts complete body text from a webpage URL using trafilatura or BeautifulSoup."""
+    """Extracts complete body text from a webpage URL, YouTube transcript, or PDF/arXiv paper."""
     if not url or not url.startswith("http"):
         return ""
+
+    if is_youtube_url(url):
+        vid = extract_youtube_video_id(url)
+        if vid:
+            transcript = get_youtube_transcript(vid)
+            if transcript:
+                return transcript
+
+    if is_arxiv_url(url):
+        details = fetch_arxiv_details(url)
+        if details.get("content"):
+            return details["content"]
+        if details.get("summary"):
+            return details["summary"]
+
+    if is_pdf_url(url):
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+            res = requests.get(url, headers=headers, timeout=10)
+            if res.status_code == 200 and res.content:
+                pdf_text = extract_pdf_text_from_bytes(res.content)
+                if pdf_text:
+                    return pdf_text
+        except Exception as e:
+            print("PDF download failed in extract_full_text_from_url:", e)
 
     try:
         downloaded = trafilatura.fetch_url(url)
@@ -82,6 +275,12 @@ def extract_full_text_from_url(url: str) -> str:
         }
         res = requests.get(url, headers=headers, timeout=6)
         if res.status_code == 200:
+            ct = res.headers.get("content-type", "").lower()
+            if "application/pdf" in ct:
+                pdf_text = extract_pdf_text_from_bytes(res.content)
+                if pdf_text:
+                    return pdf_text
+
             soup = BeautifulSoup(res.text, "html.parser")
 
             # Remove scripts and styles
@@ -167,14 +366,45 @@ Consignes :
 
 
 def generate_ai_summary_and_tags(
-    text: str, title: str = "", author: str = "", model: Optional[str] = None
+    text: str, title: str = "", author: str = "", model: Optional[str] = None, is_scientific: bool = False
 ) -> Dict[str, Any]:
     """Generates structured AI summary and tags using Vertex AI Gemini."""
     client = get_vertex_client()
     if not client:
         return {"summary": text[:400], "tags": ["IA", "Tech"], "model_used": "fallback"}
 
-    prompt = f"""Tu es un expert senior en veille technologique et IA.
+    text_lower = text.lower()
+    title_lower = title.lower()
+    if not is_scientific:
+        if "arxiv" in text_lower or "arxiv" in title_lower or "abstract" in text_lower[:200]:
+            is_scientific = True
+
+    if is_scientific:
+        prompt = f"""Tu es un chercheur et analyste senior en IA et sciences de la donnée.
+Analyse ce papier de recherche scientifique (arXiv / PDF) et génère une synthèse scientifique rigoureuse à fort impact.
+
+Titre du papier: {title}
+Auteurs: {author}
+Contenu / Abstract du papier:
+{text[:10000]}
+
+Consignes pour la synthèse scientifique ("summary") :
+- Rédige un résumé clair, structuré et rigoureux en français.
+- Structure obligatoire en 4 puces thématiques majeures :
+  • **Contexte & Problématique** : Problème scientifique/technique traité.
+  • **Méthodologie & Architecture** : Approche, méthode ou innovation proposée.
+  • **Résultats & Performances** : Métriques, benchmarks et performances observées.
+  • **Impact & Applications** : Implications pratiques et opportunités.
+- Mets en gras (**mots clés**) les notions et métriques importantes.
+
+Réponds EXCLUSIVEMENT au format JSON valide suivant :
+{{
+  "summary": "• **Contexte & Problématique** : ...\n• **Méthodologie & Architecture** : ...\n• **Résultats & Performances** : ...\n• **Impact & Applications** : ...",
+  "tags": ["arXiv", "Machine Learning", "Deep Learning"]
+}}
+"""
+    else:
+        prompt = f"""Tu es un expert senior en veille technologique et IA.
 Analyse cet article/post et génère une synthèse structurée à fort impact.
 
 Titre: {title}
@@ -202,9 +432,10 @@ Réponds EXCLUSIVEMENT au format JSON valide suivant :
         output = re.sub(r"\s*```$", "", output)
 
         data = json.loads(output)
+        default_tags = ["arXiv", "IA"] if is_scientific else ["IA", "Tech"]
         return {
             "summary": data.get("summary", text[:400]),
-            "tags": data.get("tags", ["IA", "Tech"]),
+            "tags": data.get("tags", default_tags),
             "model_used": model_used,
         }
     except Exception as e:
@@ -524,7 +755,7 @@ Consignes impératives pour l'analyse :
 3. "summary" : Synthèse stratégique globale percutante en 2-3 phrases.
 4. "news_and_trends" : Un résumé détaillé (3-4 phrases) des DERNIÈRES ACTUALITÉS récentes et de CE QUI SE DIT actuellement sur {entity} (annonces récentes, recrutements, partenariats, rumeurs ou tendances dans la communauté).
 5. "pros" : 3 points forts / atouts majeurs réels et sourcés (commençant par "• **Titre** : ..."). Associe 1 ou 2 sources réelles avec leur titre.
-6. "cons" : 3 limites, controverses ou aspects limitants réels et étayés (ex: modèle économique, dépendances, pivots, critiques techniques). Ne donne pas de banalité creuse. Associe 1 ou 2 sources réelles avec leur titre.
+6. "cons" : 3 limites, controverses ou aspects limitants réels et étayés (ex: modèle économique, dépendances, pivots, critiques techniques). Ne donne pas de banalité creuse. Associe 1 ou 2 sources réelles avec rel titre.
 
 Format de réponse EXCLUSIVEMENT en JSON pur :
 {{
