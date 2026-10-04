@@ -97,6 +97,75 @@ def extract_full_text_from_url(url: str) -> str:
     return ""
 
 
+def _fallback_category(url: str = "", title: str = "", summary: str = "", site_name: str = "") -> str:
+    """Fallback category detection when Gemini is unavailable."""
+    text = f"{title} {summary} {url} {site_name}".lower()
+    if "linkedin.com" in url.lower() or "linkedin" in site_name.lower():
+        return "LinkedIn"
+    if any(k in text for k in ["ai", "ia", "llm", "gpt", "claude", "gemini", "machine learning", "deep learning"]):
+        return "IA & Data"
+    if any(k in text for k in ["python", "javascript", "react", "vue", "code", "dev", "github", "api", "rust"]):
+        return "Dev & Tech"
+    if any(k in text for k in ["business", "startup", "vc", "saas", "marketing", "finance"]):
+        return "Business & SaaS"
+    if any(k in text for k in ["design", "ui", "ux", "css", "figma"]):
+        return "Design & UX"
+    if any(k in text for k in ["cybersecurity", "security", "privacy", "hack"]):
+        return "Sécurité"
+    return "Général"
+
+
+def classify_category_zero_shot(
+    url: str = "",
+    title: str = "",
+    summary: str = "",
+    site_name: str = "",
+    content: str = "",
+    model: Optional[str] = None,
+) -> str:
+    """Classifies an article into a category zero-shot using Gemini, with dynamic category generation for novel topics."""
+    client = get_vertex_client()
+    if not client:
+        return _fallback_category(url, title, summary, site_name)
+
+    text_info = f"Titre: {title}\nRésumé: {summary}\nSite: {site_name}\nURL: {url}"
+    if content:
+        text_info += f"\nContenu (extrait): {content[:1000]}"
+
+    prompt = f"""Tu es un classifieur IA d'articles pour une plateforme de veille technologique (Synapse).
+Analyse les informations ci-dessous et détermine la catégorie la plus appropriée pour cet article.
+
+Informations de l'article :
+{text_info}
+
+Catégories standards recommandées :
+- "IA & Data" (Intelligence Artificielle, Machine Learning, LLM, Data Science)
+- "Dev & Tech" (Développement logiciel, langages, frameworks, APIs, devops)
+- "Business & SaaS" (Startups, entrepreneuriat, finance, marketing, SaaS)
+- "Design & UX" (UI/UX design, CSS, ergonomie, Figma)
+- "Sécurité" (Cybersécurité, vie privée, piratage)
+- "LinkedIn" (Posts et réseaux professionnels LinkedIn)
+- "Général" (Sujets généralistes)
+
+Consignes :
+1. Si l'article correspond bien à une catégorie standard, retourne cette catégorie standard.
+2. Si l'article traite d'un sujet novateur ou spécialisé non couvert par les catégories standards (par exemple : "Biotech", "Physique Quantique", "Robotique", "Spatial", "Énergie & Climat", "Crypto & Web3", "Jeux Vidéo", etc.), GÉNÈRE DYNAMIQUEMENT une nouvelle catégorie pertinente et concise (1 à 3 mots maximum, en français, bien capitalisée).
+3. Ne réponds rien d'autre que le nom de la catégorie retenue. Pas de guillemets, pas de ponctuation superflue, pas d'explications.
+"""
+
+    try:
+        output, _ = generate_with_gemini(client, prompt, model)
+        cleaned = output.strip().strip('"').strip("'").strip("`").strip()
+        cleaned = re.sub(r"^(catégorie|category)\s*:\s*", "", cleaned, flags=re.IGNORECASE).strip()
+        cleaned = cleaned.split("\n")[0].strip()
+        if cleaned:
+            return cleaned
+    except Exception as e:
+        print("Zero-shot category classification failed:", e)
+
+    return _fallback_category(url, title, summary, site_name)
+
+
 def generate_ai_summary_and_tags(
     text: str, title: str = "", author: str = "", model: Optional[str] = None
 ) -> Dict[str, Any]:

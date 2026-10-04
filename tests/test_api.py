@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest  # noqa: E402
 
@@ -51,6 +52,66 @@ def test_auto_detect_category():
         "Tech & IA",
         "Dev & Tech",
     ]
+
+
+def test_classify_category_zero_shot_standard(monkeypatch):
+    from ai_service import classify_category_zero_shot
+
+    mock_client = MagicMock()
+    monkeypatch.setattr("ai_service.get_vertex_client", lambda: mock_client)
+    monkeypatch.setattr(
+        "ai_service.generate_with_gemini", lambda client, prompt, model=None: ("IA & Data", "gemini-2.5-flash")
+    )
+
+    category = classify_category_zero_shot(
+        url="https://example.com/article",
+        title="Nouveau modèle de langage LLM Open Source",
+        summary="Découverte des performances exceptionnelles.",
+    )
+    assert category == "IA & Data"
+
+
+def test_classify_category_zero_shot_dynamic_novel_topic(monkeypatch):
+    from ai_service import classify_category_zero_shot
+
+    mock_client = MagicMock()
+    monkeypatch.setattr("ai_service.get_vertex_client", lambda: mock_client)
+    monkeypatch.setattr(
+        "ai_service.generate_with_gemini",
+        lambda client, prompt, model=None: ("Biotech & Santé", "gemini-2.5-flash"),
+    )
+
+    category = classify_category_zero_shot(
+        url="https://example.com/dna-editing",
+        title="CRISPR v2: Séquençage génétique rapide",
+        summary="Thérapie génique et médecine de précision.",
+    )
+    assert category == "Biotech & Santé"
+
+
+def test_classify_category_zero_shot_fallback(monkeypatch):
+    from ai_service import classify_category_zero_shot
+
+    # 1. Fallback when Gemini client is None
+    monkeypatch.setattr("ai_service.get_vertex_client", lambda: None)
+
+    cat_linkedin = classify_category_zero_shot(url="https://linkedin.com/posts/123", site_name="LinkedIn")
+    assert cat_linkedin == "LinkedIn"
+
+    cat_dev = classify_category_zero_shot(url="https://github.com/repo", title="Python Framework")
+    assert cat_dev == "Dev & Tech"
+
+    # 2. Fallback when Gemini API call raises an exception
+    mock_client = MagicMock()
+    monkeypatch.setattr("ai_service.get_vertex_client", lambda: mock_client)
+
+    def mock_raise(*args, **kwargs):
+        raise RuntimeError("API error")
+
+    monkeypatch.setattr("ai_service.generate_with_gemini", mock_raise)
+
+    cat_fallback = classify_category_zero_shot(url="https://example.com/test", title="Random Subject")
+    assert cat_fallback == "Général"
 
 
 def test_sentiment_report_save_and_get():
