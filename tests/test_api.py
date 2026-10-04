@@ -256,3 +256,86 @@ def test_scientific_ai_summary_fallback():
     assert "summary" in res
     assert "tags" in res
     assert isinstance(res["tags"], list)
+
+
+def test_hybrid_search():
+    from database import get_db_connection, hybrid_search_articles
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO articles (title, summary, content, category) VALUES (?, ?, ?, ?)",
+        (
+            "Machine Learning Vector Search",
+            "In-depth guide on RRF and embeddings.",
+            "Full text content about vector databases.",
+            "IA & Data",
+        ),
+    )
+    conn.commit()
+
+    results = hybrid_search_articles(conn, "Vector Search", limit=10)
+    assert isinstance(results, list)
+    assert len(results) >= 1
+    assert "Vector Search" in results[0]["title"]
+
+
+def test_compute_embedding():
+    from ai_service import compute_embedding
+
+    emb = compute_embedding("Intelligence Artificielle et Vector Search")
+    assert emb is not None
+    assert isinstance(emb, list)
+    assert len(emb) == 384
+
+
+def test_create_article_with_embedding():
+    with TestClient(app) as client:
+        article_data = {
+            "url": "https://example.com/vector-db-test",
+            "title": "Database sqlite-vec et recherche hybride",
+            "summary": "Mise en place de sqlite-vec pour les embeddings vectoriels.",
+            "content": "Aperçu de la recherche vectorielle avec sqlite-vec et FTS5.",
+            "category": "IA & Data",
+            "tags": "vector, sqlite-vec, rrf",
+        }
+        response = client.post("/api/articles", json=article_data)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["title"] == article_data["title"]
+        art_id = data["id"]
+
+        from database import get_db_connection
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT article_id FROM vec_articles WHERE article_id = ?", (art_id,))
+        vec_row = cursor.fetchone()
+        assert vec_row is not None
+        assert vec_row["article_id"] == art_id
+        conn.close()
+
+
+def test_search_endpoints_hybrid():
+    with TestClient(app) as client:
+        # 1. Test GET /api/search?q=...
+        res1 = client.get("/api/search?q=sqlite-vec")
+        assert res1.status_code == 200
+        articles = res1.json()
+        assert isinstance(articles, list)
+
+        # 2. Test GET /api/articles?search=...
+        res2 = client.get("/api/articles?search=vector")
+        assert res2.status_code == 200
+        articles_search = res2.json()
+        assert isinstance(articles_search, list)
+
+
+def test_ai_chat_endpoint_with_hybrid_search():
+    with TestClient(app) as client:
+        payload = {"query": "Comment fonctionne la recherche vectorielle ?", "web_search": False}
+        res = client.post("/api/ai/chat", json=payload)
+        assert res.status_code == 200
+        data = res.json()
+        assert "answer" in data
+        assert "conversation_id" in data

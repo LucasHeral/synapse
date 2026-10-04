@@ -11,6 +11,7 @@ from ai_service import (
     answer_rag_question,
     classify_category_zero_shot,
     compare_sentiment_evolution,
+    compute_embedding,
     extract_full_text_from_url,
     extract_pdf_metadata_and_text,
     extract_youtube_video_id,
@@ -24,7 +25,13 @@ from ai_service import (
     is_youtube_url,
 )
 from bs4 import BeautifulSoup
-from database import get_db_connection, init_db
+from database import (
+    delete_article_embedding,
+    get_db_connection,
+    hybrid_search_articles,
+    init_db,
+    save_article_embedding,
+)
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -361,6 +368,17 @@ def create_article(article: ArticleCreate):
     cursor.execute("SELECT * FROM articles WHERE id = ?", (article_id,))
     row = cursor.fetchone()
     res = dict(row) if row else {}
+
+    # Compute and save vector embedding
+    text_to_embed = f"{article.title}\n{article.summary or ''}\n{content}\nTags: {tags_str or ''}\nNotes: {article.notes or ''}".strip()
+    if text_to_embed:
+        try:
+            emb = compute_embedding(text_to_embed)
+            if emb:
+                save_article_embedding(conn, article_id, emb)
+        except Exception as e:
+            print("Failed to save article embedding:", e)
+
     conn.close()
     return res
 
@@ -420,6 +438,17 @@ def ai_enrich_article(article_id: int, req: Optional[EnrichRequest] = None):
 
     cursor.execute("SELECT * FROM articles WHERE id = ?", (article_id,))
     updated_res = dict(cursor.fetchone())
+
+    # Re-compute and update vector embedding
+    text_to_embed = f"{title}\n{new_summary}\n{content}\nTags: {tags_str}".strip()
+    if text_to_embed:
+        try:
+            emb = compute_embedding(text_to_embed)
+            if emb:
+                save_article_embedding(conn, article_id, emb)
+        except Exception as e:
+            print("Failed to update article embedding after enrichment:", e)
+
     conn.close()
     return updated_res
 
@@ -545,9 +574,17 @@ def chat_kb_endpoint(req: ChatRequest):
     )
     history = [dict(r) for r in cursor.fetchall()]
 
-    # Fetch knowledge base articles
-    cursor.execute("SELECT * FROM articles WHERE is_archived = 0 ORDER BY created_at DESC LIMIT 50")
-    articles = [dict(r) for r in cursor.fetchall()]
+    # Fetch knowledge base articles using hybrid search (FTS + sqlite-vec vector search)
+    articles = hybrid_search_articles(conn, req.query, limit=30, include_archived=False)
+
+    # Supplement with recent articles if hybrid search returned few results
+    existing_ids = {a["id"] for a in articles if isinstance(a.get("id"), int)}
+    cursor.execute("SELECT * FROM articles WHERE is_archived = 0 ORDER BY created_at DESC LIMIT 20")
+    for r in cursor.fetchall():
+        d = dict(r)
+        if d["id"] not in existing_ids:
+            articles.append(d)
+            existing_ids.add(d["id"])
 
     # Also include saved sentiment reports in RAG context
     cursor.execute("SELECT * FROM sentiment_reports ORDER BY updated_at DESC LIMIT 20")
@@ -822,6 +859,14 @@ def delete_sentiment_entity_reports(entity: str):
     return {"status": "success", "entity": entity}
 
 
+@app.get("/api/search")
+def search_articles_endpoint(q: str, limit: int = 50, archived: bool = False):
+    conn = get_db_connection()
+    results = hybrid_search_articles(conn, q, limit=limit, include_archived=archived)
+    conn.close()
+    return results
+
+
 @app.get("/api/articles")
 def list_articles(
     category: Optional[str] = None,
@@ -833,8 +878,22 @@ def list_articles(
     offset: int = 0,
 ):
     conn = get_db_connection()
-    cursor = conn.cursor()
 
+    if search:
+        results = hybrid_search_articles(conn, search, limit=limit + offset, include_archived=archived or False)
+        filtered = []
+        for a in results:
+            if category and category != "Tous" and a.get("category") != category:
+                continue
+            if tag and tag not in (a.get("tags") or ""):
+                continue
+            if favorite is not None and bool(a.get("is_favorite")) != favorite:
+                continue
+            filtered.append(a)
+        conn.close()
+        return filtered[offset : offset + limit]
+
+    cursor = conn.cursor()
     query = "SELECT * FROM articles WHERE is_archived = ?"
     params = [1 if archived else 0]
 
@@ -942,6 +1001,17 @@ def update_article(article_id: int, update: ArticleUpdate):
 
     cursor.execute("SELECT * FROM articles WHERE id = ?", (article_id,))
     updated_row = dict(cursor.fetchone())
+
+    # Re-compute and update vector embedding
+    text_to_embed = f"{updated_row.get('title') or ''}\n{updated_row.get('summary') or ''}\n{updated_row.get('content') or ''}\nTags: {updated_row.get('tags') or ''}\nNotes: {updated_row.get('notes') or ''}".strip()
+    if text_to_embed:
+        try:
+            emb = compute_embedding(text_to_embed)
+            if emb:
+                save_article_embedding(conn, article_id, emb)
+        except Exception as e:
+            print("Failed to update embedding on article update:", e)
+
     conn.close()
     return updated_row
 
@@ -951,6 +1021,7 @@ def delete_article(article_id: int):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM articles WHERE id = ?", (article_id,))
+    delete_article_embedding(conn, article_id)
     conn.commit()
     conn.close()
     return {"success": True, "message": f"Article {article_id} supprimé"}

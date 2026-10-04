@@ -22,6 +22,8 @@ dependencies = [
     "pillow>=11.3.0",
     "youtube-transcript-api>=1.2.4",
     "pypdf>=6.19.0",
+    "sqlite-vec>=0.1.9",
+    "fastembed>=0.8.1",
 ]
 
 [build-system]
