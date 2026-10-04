@@ -72,3 +72,38 @@ def test_sentiment_report_save_and_get():
         data = res_get.json()
         assert data["entity"] == "OpenAI"
         assert data["sentiment_score"] == 80
+
+
+def test_article_permalink_endpoint():
+    with TestClient(app) as client:
+        create_payload = {
+            "title": "Article Test Permalink",
+            "url": "https://example.com/article-test-permalink",
+            "summary": "Résumé de l'article de test permalink.",
+            "category": "Tech & IA",
+            "site_name": "Example",
+            "author": "Auteur Test",
+        }
+        res_create = client.post("/api/articles", json=create_payload)
+        assert res_create.status_code == 200
+        created = res_create.json()
+        article_id = created["id"]
+
+        res_get = client.get(f"/api/articles/{article_id}")
+        assert res_get.status_code == 200
+        data = res_get.json()
+        assert data["id"] == article_id
+        assert data["title"] == "Article Test Permalink"
+        assert "permalink" in data
+        assert data["permalink"] == f"/?article={article_id}"
+        assert "share_metadata" in data
+        assert data["share_metadata"]["title"] == "Article Test Permalink"
+        assert data["share_metadata"]["permalink"] == f"/?article={article_id}"
+
+
+def test_article_permalink_not_found():
+    with TestClient(app) as client:
+        res_get = client.get("/api/articles/999999")
+        assert res_get.status_code == 404
+        data = res_get.json()
+        assert data["detail"] == "Article introuvable"
