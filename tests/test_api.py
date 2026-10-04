@@ -72,3 +72,25 @@ def test_sentiment_report_save_and_get():
         data = res_get.json()
         assert data["entity"] == "OpenAI"
         assert data["sentiment_score"] == 80
+
+
+def test_hybrid_search():
+    from database import get_db_connection, hybrid_search_articles
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO articles (title, summary, content, category) VALUES (?, ?, ?, ?)",
+        (
+            "Machine Learning Vector Search",
+            "In-depth guide on RRF and embeddings.",
+            "Full text content about vector databases.",
+            "IA & Data",
+        ),
+    )
+    conn.commit()
+
+    results = hybrid_search_articles(conn, "Vector Search", limit=10)
+    assert isinstance(results, list)
+    assert len(results) >= 1
+    assert "Vector Search" in results[0]["title"]

@@ -20,6 +20,8 @@ dependencies = [
     "mkdocs>=1.5.0",
     "mkdocs-material>=9.5.0",
     "pillow>=11.3.0",
+    "sqlite-vec>=0.1.9",
+    "fastembed>=0.8.1",
 ]
 
 [build-system]

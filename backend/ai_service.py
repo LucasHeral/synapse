@@ -13,6 +13,37 @@ from google.genai import types
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 _vertex_client = None
+_embedding_model = None
+
+
+def get_embedding_model():
+    global _embedding_model
+    if _embedding_model is not None:
+        return _embedding_model
+
+    try:
+        from fastembed import TextEmbedding
+
+        _embedding_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
+        return _embedding_model
+    except Exception as e:
+        print("Error initializing fastembed model:", e)
+        return None
+
+
+def compute_embedding(text: str) -> Optional[List[float]]:
+    """Computes a 384-dimensional vector embedding for text using local fastembed ONNX model."""
+    if not text or not text.strip():
+        return None
+    try:
+        model = get_embedding_model()
+        if model:
+            embeddings = list(model.embed([text]))
+            if embeddings and len(embeddings) > 0:
+                return embeddings[0].tolist()
+    except Exception as e:
+        print("Embedding computation error:", e)
+    return None
 
 
 def get_vertex_client():
