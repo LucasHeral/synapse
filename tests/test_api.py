@@ -72,3 +72,26 @@ def test_sentiment_report_save_and_get():
         data = res_get.json()
         assert data["entity"] == "OpenAI"
         assert data["sentiment_score"] == 80
+
+
+def test_youtube_ingestion_helpers():
+    from ai_service import extract_youtube_video_id, is_youtube_url
+
+    yt_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    assert is_youtube_url(yt_url) is True
+    assert extract_youtube_video_id(yt_url) == "dQw4w9WgXcQ"
+
+    short_url = "https://youtu.be/dQw4w9WgXcQ"
+    assert is_youtube_url(short_url) is True
+    assert extract_youtube_video_id(short_url) == "dQw4w9WgXcQ"
+
+
+def test_arxiv_pdf_ingestion_helpers():
+    from ai_service import extract_arxiv_id, is_arxiv_url, is_pdf_url
+
+    arxiv_url = "https://arxiv.org/abs/2301.00001"
+    assert is_arxiv_url(arxiv_url) is True
+    assert extract_arxiv_id(arxiv_url) == "2301.00001"
+
+    pdf_url = "https://example.com/paper.pdf"
+    assert is_pdf_url(pdf_url) is True
