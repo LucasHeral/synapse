@@ -374,3 +374,38 @@ def test_article_permalink_not_found():
         assert res_get.status_code == 404
         data = res_get.json()
         assert data["detail"] == "Article introuvable"
+
+
+def test_whatsapp_inbox_and_sync():
+    with TestClient(app) as client:
+        # Ingest a simulated WhatsApp message
+        post_res = client.post(
+            "/api/ingestion/whatsapp",
+            json={
+                "sender": "Lucas",
+                "text": "Regarde ce repo super intéressant : https://github.com/fastapi/fastapi",
+                "group": "SYNAPSE",
+            },
+        )
+        assert post_res.status_code == 200
+        post_data = post_res.json()
+        assert post_data["status"] == "received"
+
+        # Now trigger sync
+        sync_res = client.get("/api/whatsapp/sync")
+        assert sync_res.status_code == 200
+        sync_data = sync_res.json()
+        assert sync_data["status"] == "success"
+        assert "processed_messages" in sync_data
+
+
+def test_github_and_instagram_helpers():
+    from ingestion_services import is_github_repo_url, is_instagram_url
+
+    assert is_github_repo_url("https://github.com/tiangolo/fastapi") is True
+    assert is_github_repo_url("https://github.com/tiangolo/fastapi/issues/123") is False
+    assert is_github_repo_url("https://google.com") is False
+
+    assert is_instagram_url("https://www.instagram.com/reel/C3x9Zabc/") is True
+    assert is_instagram_url("https://instagram.com/p/C3x9Zabc/") is True
+    assert is_instagram_url("https://twitter.com") is False

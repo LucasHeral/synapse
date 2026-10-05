@@ -1,7 +1,7 @@
 import json
 import os
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
 import requests
@@ -114,6 +114,27 @@ def extract_metadata(req: ExtractRequest):
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
     }
+
+    # Special Handling: GitHub Repositories (Stars, Forks, Language, Full README)
+    from ingestion_services import (
+        extract_instagram_reel,
+        fetch_github_repo_details,
+        is_github_repo_url,
+        is_instagram_url,
+    )
+
+    if is_github_repo_url(url):
+        try:
+            return fetch_github_repo_details(url)
+        except Exception as e:
+            print("GitHub repo fetch error:", e)
+
+    # Special Handling: Instagram Reels & Posts (Audio Extraction & Gemini Transcription)
+    if is_instagram_url(url):
+        try:
+            return extract_instagram_reel(url)
+        except Exception as e:
+            print("Instagram reel fetch error:", e)
 
     # 1. YouTube handling
     if is_youtube_url(url):
@@ -272,6 +293,83 @@ def extract_metadata(req: ExtractRequest):
     )
 
     return extracted
+
+
+@app.get("/api/whatsapp/sync")
+def sync_whatsapp_inbox_endpoint():
+    """Syncs un-processed WhatsApp messages from the SYNAPSE group and ingests new links."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS whatsapp_inbox (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_name TEXT DEFAULT 'SYNAPSE',
+            sender TEXT,
+            message_text TEXT,
+            urls_json TEXT,
+            is_processed INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    cursor.execute("SELECT * FROM whatsapp_inbox WHERE is_processed = 0 ORDER BY created_at ASC")
+    pending = [dict(r) for r in cursor.fetchall()]
+
+    ingested_articles = []
+    for p in pending:
+        urls = json.loads(p.get("urls_json") or "[]")
+        for u in urls:
+            cursor.execute("SELECT id FROM articles WHERE url = ?", (u,))
+            if not cursor.fetchone():
+                try:
+                    meta = extract_metadata(ExtractRequest(url=u))
+                    cursor.execute(
+                        """
+                        INSERT INTO articles (url, title, summary, content, site_name, author, category, tags, notes, image_url)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                        (
+                            meta.get("url"),
+                            meta.get("title") or u,
+                            meta.get("summary") or "",
+                            meta.get("content") or "",
+                            meta.get("site_name") or "WhatsApp",
+                            meta.get("author") or "WhatsApp",
+                            meta.get("category") or "Tech & IA",
+                            meta.get("tags") or "",
+                            meta.get("notes") or "",
+                            meta.get("image_url") or "",
+                        ),
+                    )
+                    conn.commit()
+                    ingested_articles.append(meta.get("title") or u)
+                except Exception as e:
+                    print(f"Erreur ingestion lien WhatsApp {u}: {e}")
+
+        cursor.execute("UPDATE whatsapp_inbox SET is_processed = 1 WHERE id = ?", (p["id"],))
+        conn.commit()
+
+    conn.close()
+    return {
+        "status": "success",
+        "processed_messages": len(pending),
+        "ingested_count": len(ingested_articles),
+        "ingested_titles": ingested_articles,
+    }
+
+
+@app.post("/api/ingestion/whatsapp")
+def receive_whatsapp_message(payload: Dict[str, Any]):
+    """Receives a new WhatsApp message (from bridge daemon or webhook) and stores it in the inbox."""
+    from ingestion_services import process_whatsapp_incoming_message
+
+    sender = payload.get("sender") or payload.get("From") or "Moi"
+    message_text = payload.get("text") or payload.get("Body") or payload.get("message") or ""
+    group_name = payload.get("group") or "SYNAPSE"
+
+    res = process_whatsapp_incoming_message(sender, message_text, group_name)
+    return {"status": "received", "data": res}
 
 
 @app.post("/api/articles")

@@ -1594,7 +1594,26 @@ ${escapeHtml(data.newsletter_markdown)}
       }
     }
 
+    async function syncWhatsAppInbox() {
+      try {
+        const res = await fetch('/api/whatsapp/sync');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ingested_count > 0) {
+            showToast(`${data.ingested_count} nouveau(x) contenu(s) WhatsApp ingéré(s) !`, 'success');
+            fetchArticles();
+            fetchStats();
+          }
+        }
+      } catch (e) {
+        console.warn('Sync WhatsApp:', e);
+      }
+    }
+
     async function fetchArticles() {
+      // Sync pending WhatsApp items in background
+      syncWhatsAppInbox();
+
       const search = document.getElementById('searchInput').value.trim();
       let url = '/api/articles?';
       const params = new URLSearchParams();
@@ -1745,6 +1764,35 @@ ${escapeHtml(data.newsletter_markdown)}
                   <span>${escapeHtml(cleanTitle)}</span>
                 </h3>
 
+                <!-- GitHub KPIs Badge (if repo) -->
+                ${(() => {
+                  if (site === 'GitHub' || (art.notes && art.notes.includes('stars'))) {
+                    try {
+                      const kpis = JSON.parse(art.notes || '{}');
+                      if (kpis.stars_str) {
+                        return `
+                          <div class="flex items-center gap-1.5 pt-0.5 text-[10.5px] font-mono text-amber-300/90 font-medium flex-wrap">
+                            <span class="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-full">
+                              <i class="fa-solid fa-star text-[9px] text-amber-400"></i> ${kpis.stars_str}
+                            </span>
+                            ${kpis.forks_str ? `
+                              <span class="inline-flex items-center gap-1 bg-white/[0.04] text-slate-300 border border-white/[0.08] px-2 py-0.5 rounded-full">
+                                <i class="fa-solid fa-code-fork text-[9px] text-slate-400"></i> ${kpis.forks_str}
+                              </span>
+                            ` : ''}
+                            ${kpis.language ? `
+                              <span class="inline-flex items-center gap-1 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2 py-0.5 rounded-full">
+                                <i class="fa-solid fa-circle text-[5px] text-indigo-400"></i> ${kpis.language}
+                              </span>
+                            ` : ''}
+                          </div>
+                        `;
+                      }
+                    } catch (e) {}
+                  }
+                  return '';
+                })()}
+
                 <!-- Meta Row: Author & Date -->
                 <div class="flex items-center gap-2 text-[11px] text-slate-400 font-mono">
                   ${art.author ? `
@@ -1884,7 +1932,35 @@ ${escapeHtml(data.newsletter_markdown)}
         const fullText = (currentReaderArticle.content && currentReaderArticle.content.trim().length > 30)
           ? currentReaderArticle.content
           : (currentReaderArticle.summary || 'Aucun contenu texte disponible.');
-        bodyEl.innerText = fullText;
+
+        let headerBanner = '';
+        if (currentReaderArticle.site_name === 'GitHub' || (currentReaderArticle.notes && currentReaderArticle.notes.includes('stars'))) {
+          try {
+            const kpis = JSON.parse(currentReaderArticle.notes || '{}');
+            if (kpis.stars_str) {
+              headerBanner = `
+                <div class="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-3 flex-wrap">
+                  <div class="flex items-center gap-2 text-xs font-mono font-medium text-amber-200 flex-wrap">
+                    <span class="inline-flex items-center gap-1.5 bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/30">
+                      <i class="fa-solid fa-star text-amber-400"></i> ${kpis.stars_str} étoiles
+                    </span>
+                    ${kpis.forks_str ? `<span class="inline-flex items-center gap-1.5 bg-white/[0.06] px-2.5 py-1 rounded-lg border border-white/10 text-white"><i class="fa-solid fa-code-fork text-slate-400"></i> ${kpis.forks_str} forks</span>` : ''}
+                    ${kpis.language ? `<span class="inline-flex items-center gap-1.5 bg-indigo-500/20 px-2.5 py-1 rounded-lg border border-indigo-500/30 text-indigo-300"><i class="fa-solid fa-code"></i> ${kpis.language}</span>` : ''}
+                    ${kpis.license ? `<span class="text-slate-400">⚖️ ${kpis.license}</span>` : ''}
+                  </div>
+                  <span class="text-[11px] font-mono text-slate-400">README Markdown</span>
+                </div>
+              `;
+            }
+          } catch(e) {}
+        }
+
+        const isMarkdownContent = currentReaderArticle.site_name === 'GitHub' || fullText.includes('# ') || fullText.includes('```') || fullText.includes('## ');
+        if (isMarkdownContent) {
+          bodyEl.innerHTML = `${headerBanner}<div class="prose-chat text-xs md:text-sm text-slate-200 leading-relaxed">${renderMarkdown(fullText)}</div>`;
+        } else {
+          bodyEl.innerText = fullText;
+        }
       } else {
         btnSummary.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition bg-purple-950 text-purple-300 border border-purple-800/40";
         btnFull.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition text-slate-400 hover:text-white";
