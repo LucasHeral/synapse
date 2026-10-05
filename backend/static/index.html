@@ -785,8 +785,8 @@
 
         <div class="flex justify-end space-x-3 pt-2">
           <button type="button" onclick="closeAddModal()" class="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white">Annuler</button>
-          <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30">
-            Enregistrer dans ma veille
+          <button type="submit" id="addSubmitBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 transition">
+            <span>Enregistrer dans ma veille</span>
           </button>
         </div>
       </form>
@@ -2232,9 +2232,17 @@ ${escapeHtml(data.newsletter_markdown)}
       document.getElementById('addModal').classList.remove('hidden');
     }
 
+    let _extractedArticleContent = '';
+
     function closeAddModal() {
       document.getElementById('addModal').classList.add('hidden');
       document.getElementById('addForm').reset();
+      _extractedArticleContent = '';
+      const submitBtn = document.getElementById('addSubmitBtn');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Enregistrer dans ma veille</span>';
+      }
     }
 
     async function extractFromUrl() {
@@ -2259,9 +2267,12 @@ ${escapeHtml(data.newsletter_markdown)}
         if (data.summary) document.getElementById('addSummary').value = data.summary;
         if (data.site_name) document.getElementById('addSiteName').value = data.site_name;
         if (data.category) document.getElementById('addCategory').value = data.category;
+        if (data.content) _extractedArticleContent = data.content;
 
+        showToast('Métadonnées et contenu extraits avec succès !', 'success');
       } catch (err) {
         console.error('Extraction error:', err);
+        showToast('Erreur lors de l\'extraction automatique.', 'error');
       } finally {
         btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> Auto-extraire`;
       }
@@ -2269,13 +2280,21 @@ ${escapeHtml(data.newsletter_markdown)}
 
     async function submitAddForm(e) {
       e.preventDefault();
+      const submitBtn = document.getElementById('addSubmitBtn');
+      const originalHTML = submitBtn ? submitBtn.innerHTML : '<span>Enregistrer dans ma veille</span>';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin text-xs"></i> <span>Enregistrement en cours...</span>`;
+      }
+
       const payload = {
         url: document.getElementById('addUrl').value.trim(),
         title: document.getElementById('addTitle').value.trim(),
         category: document.getElementById('addCategory').value,
         site_name: document.getElementById('addSiteName').value.trim(),
         summary: document.getElementById('addSummary').value.trim(),
-        notes: document.getElementById('addNotes').value.trim()
+        notes: document.getElementById('addNotes').value.trim(),
+        content: _extractedArticleContent || ''
       };
 
       try {
@@ -2285,13 +2304,22 @@ ${escapeHtml(data.newsletter_markdown)}
           body: JSON.stringify(payload)
         });
         if (res.ok) {
+          showToast('Article enregistré dans votre veille !', 'success');
           closeAddModal();
           fetchArticles();
           fetchCategories();
           fetchStats();
+        } else {
+          showToast('Erreur lors de l\'enregistrement.', 'error');
         }
       } catch (err) {
         console.error('Erreur sauvegarde:', err);
+        showToast('Erreur de connexion au serveur.', 'error');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalHTML;
+        }
       }
     }
 

@@ -409,3 +409,26 @@ def test_github_and_instagram_helpers():
     assert is_instagram_url("https://www.instagram.com/reel/C3x9Zabc/") is True
     assert is_instagram_url("https://instagram.com/p/C3x9Zabc/") is True
     assert is_instagram_url("https://twitter.com") is False
+
+
+def test_youtube_extraction_and_save():
+    with TestClient(app) as client:
+        # Test 1: /api/extract
+        extract_res = client.post("/api/extract", json={"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"})
+        assert extract_res.status_code == 200
+        data = extract_res.json()
+        assert data["title"] != "Vidéo YouTube"
+        assert "Rick Astley" in data["title"] or "Never Gonna Give" in data["title"]
+        assert data["content"] is not None
+        assert len(data["content"]) > 50
+
+        # Test 2: Saving without title or content auto-populates both
+        save_res = client.post(
+            "/api/articles", json={"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "title": ""}
+        )
+        assert save_res.status_code == 200
+        saved = save_res.json()
+        assert saved["title"] != "Vidéo YouTube"
+        assert "Rick Astley" in saved["title"] or "Never Gonna Give" in saved["title"]
+        assert saved["content"] is not None
+        assert len(saved["content"]) > 50

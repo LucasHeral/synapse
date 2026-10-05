@@ -32,7 +32,7 @@ from database import (
     init_db,
     save_article_embedding,
 )
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -139,41 +139,74 @@ def extract_metadata(req: ExtractRequest):
     # 1. YouTube handling
     if is_youtube_url(url):
         video_id = extract_youtube_video_id(url)
+        video_title = None
+        video_author = ""
+        video_thumbnail = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg" if video_id else ""
+        video_desc = ""
+
+        # 1. Fetch metadata via YouTube official open oEmbed API (Never blocked, fast < 50ms)
+        if video_id:
+            try:
+                oembed_url = (
+                    f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
+                )
+                oembed_res = requests.get(oembed_url, timeout=5)
+                if oembed_res.status_code == 200:
+                    oembed_data = oembed_res.json()
+                    if oembed_data.get("title"):
+                        video_title = oembed_data["title"].strip()
+                    if oembed_data.get("author_name"):
+                        video_author = oembed_data["author_name"].strip()
+                    if oembed_data.get("thumbnail_url"):
+                        video_thumbnail = oembed_data["thumbnail_url"]
+            except Exception as e:
+                print("YouTube oEmbed fetch error:", e)
+
+        # 2. Fallback to yt-dlp if title is missing
+        if not video_title:
+            try:
+                import yt_dlp
+
+                ydl_opts = {
+                    "skip_download": True,
+                    "quiet": True,
+                    "no_warnings": True,
+                }
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    if info:
+                        t_val = info.get("title")
+                        if t_val:
+                            video_title = str(t_val).strip()
+                        u_val = info.get("uploader")
+                        if u_val and not video_author:
+                            video_author = str(u_val).strip()
+                        d_val = info.get("description")
+                        if d_val and not video_desc:
+                            video_desc = str(d_val)[:500]
+                        th_val = info.get("thumbnail")
+                        if th_val and not video_thumbnail:
+                            video_thumbnail = str(th_val)
+            except Exception as e:
+                print("yt-dlp YouTube info fallback error:", e)
+
+        # 3. Retrieve full transcript
         transcript = get_youtube_transcript(video_id) if video_id else None
+
+        summary = video_desc
+        if transcript:
+            summary = f"Transcript de la vidéo :\n{transcript[:600]}..." if not summary else summary
 
         extracted = {
             "url": url,
-            "title": "Vidéo YouTube",
-            "summary": "",
+            "title": video_title or "Vidéo YouTube",
+            "summary": summary,
             "content": transcript or "",
             "site_name": "YouTube",
-            "author": "",
-            "image_url": f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg" if video_id else "",
-            "category": "Dev & Tech",
+            "author": video_author or "YouTube",
+            "image_url": video_thumbnail,
+            "category": "Tech & IA",
         }
-        try:
-            response = requests.get(url, headers=headers, timeout=6)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, "html.parser")
-                og_title = soup.find("meta", property="og:title") or soup.find("meta", {"name": "twitter:title"})
-                if og_title and og_title.get("content"):
-                    extracted["title"] = og_title["content"].strip()
-                elif soup.title and soup.title.text:
-                    extracted["title"] = soup.title.text.strip().replace(" - YouTube", "")
-
-                og_desc = soup.find("meta", property="og:description") or soup.find("meta", {"name": "description"})
-                if og_desc and og_desc.get("content"):
-                    extracted["summary"] = og_desc["content"].strip()
-
-                meta_author = soup.find("link", itemprop="name") or soup.find("meta", property="og:site_name")
-                if meta_author and meta_author.get("content"):
-                    extracted["author"] = meta_author["content"].strip()
-        except Exception as e:
-            print("YouTube metadata scrape error:", e)
-
-        if transcript:
-            if not extracted["summary"] or len(extracted["summary"]) < 20:
-                extracted["summary"] = transcript[:500] + "..."
 
         extracted["category"] = auto_detect_category(
             extracted["url"], extracted["title"], extracted["summary"], extracted["site_name"]
@@ -372,8 +405,47 @@ def receive_whatsapp_message(payload: Dict[str, Any]):
     return {"status": "received", "data": res}
 
 
+def background_article_enrichment_and_embedding(
+    article_id: int, article_url: Optional[str], content: str, title: str, summary: str, tags: str, notes: str
+):
+    """Background task to extract full page text if missing and compute vector embedding."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        if article_url and len(content) < 100 and article_url.startswith("http"):
+            try:
+                extracted_text = extract_full_text_from_url(article_url)
+                if extracted_text and len(extracted_text) > len(content):
+                    content = extracted_text
+                    cursor.execute("UPDATE articles SET content = ? WHERE id = ?", (content, article_id))
+                    conn.commit()
+            except Exception as e:
+                print("Background text extraction failed:", e)
+
+        # For YouTube URLs: ensure transcript is fetched if content is empty
+        if article_url and is_youtube_url(article_url) and not content:
+            vid = extract_youtube_video_id(article_url)
+            if vid:
+                t = get_youtube_transcript(vid)
+                if t:
+                    content = t
+                    cursor.execute("UPDATE articles SET content = ? WHERE id = ?", (content, article_id))
+                    conn.commit()
+
+        text_to_embed = f"{title}\n{summary}\n{content}\nTags: {tags}\nNotes: {notes}".strip()
+        if text_to_embed:
+            try:
+                emb = compute_embedding(text_to_embed)
+                if emb:
+                    save_article_embedding(conn, article_id, emb)
+            except Exception as e:
+                print("Failed to save article embedding:", e)
+    finally:
+        conn.close()
+
+
 @app.post("/api/articles")
-def create_article(article: ArticleCreate):
+def create_article(article: ArticleCreate, background_tasks: BackgroundTasks):
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -398,15 +470,35 @@ def create_article(article: ArticleCreate):
         except Exception:
             site_name = "Web"
 
-    # Auto-fetch full page text if content is empty or short
     content = article.content.strip() if article.content else ""
-    if article_url and len(content) < 100 and article_url.startswith("http"):
-        try:
-            extracted_text = extract_full_text_from_url(article_url)
-            if extracted_text and len(extracted_text) > len(content):
-                content = extracted_text
-        except Exception:
-            pass
+
+    # Special Handling: YouTube URLs when title or transcript is missing on save
+    if article_url and is_youtube_url(article_url):
+        vid = extract_youtube_video_id(article_url)
+        # 1. Title fallback via oEmbed
+        if not article.title or article.title.strip() in ["", "Vidéo YouTube", article_url]:
+            if vid:
+                try:
+                    oembed_url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={vid}&format=json"
+                    o_res = requests.get(oembed_url, timeout=5)
+                    if o_res.status_code == 200:
+                        real_t = o_res.json().get("title")
+                        if real_t:
+                            article.title = str(real_t).strip()
+                except Exception as e:
+                    print("Error fetching real YouTube title on save:", e)
+
+        # 2. Thumbnail fallback
+        if not article.image_url and vid:
+            article.image_url = f"https://img.youtube.com/vi/{vid}/maxresdefault.jpg"
+
+        # 3. Retrieve transcript if content is empty
+        if not content and vid:
+            t = get_youtube_transcript(vid)
+            if t:
+                content = t
+                if not article.summary or len(article.summary) < 20:
+                    article.summary = f"Transcript de la vidéo :\n{t[:600]}..."
 
     # Check if category is empty/default, auto-detect if needed
     category = article.category or "Général"
@@ -466,18 +558,32 @@ def create_article(article: ArticleCreate):
     cursor.execute("SELECT * FROM articles WHERE id = ?", (article_id,))
     row = cursor.fetchone()
     res = dict(row) if row else {}
-
-    # Compute and save vector embedding
-    text_to_embed = f"{article.title}\n{article.summary or ''}\n{content}\nTags: {tags_str or ''}\nNotes: {article.notes or ''}".strip()
-    if text_to_embed:
-        try:
-            emb = compute_embedding(text_to_embed)
-            if emb:
-                save_article_embedding(conn, article_id, emb)
-        except Exception as e:
-            print("Failed to save article embedding:", e)
-
     conn.close()
+
+    # Asynchronously process heavy background tasks (instant sub-10ms response)
+    if article_id:
+        if background_tasks is not None:
+            background_tasks.add_task(
+                background_article_enrichment_and_embedding,
+                article_id,
+                article_url,
+                content,
+                article.title,
+                article.summary or "",
+                tags_str or "",
+                article.notes or "",
+            )
+        else:
+            background_article_enrichment_and_embedding(
+                article_id,
+                article_url,
+                content,
+                article.title,
+                article.summary or "",
+                tags_str or "",
+                article.notes or "",
+            )
+
     return res
 
 
