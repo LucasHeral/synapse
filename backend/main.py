@@ -966,7 +966,18 @@ def get_article(article_id: int):
     conn.close()
     if not row:
         raise HTTPException(status_code=404, detail="Article introuvable")
-    return dict(row)
+    res = dict(row)
+    res["permalink"] = f"/?article={article_id}"
+    res["share_metadata"] = {
+        "title": res.get("title", ""),
+        "summary": res.get("summary", ""),
+        "site_name": res.get("site_name", ""),
+        "author": res.get("author", ""),
+        "category": res.get("category", ""),
+        "url": res.get("url", ""),
+        "permalink": f"/?article={article_id}",
+    }
+    return res
 
 
 @app.patch("/api/articles/{article_id}")

@@ -812,10 +812,16 @@
 
         <div class="flex items-center justify-between text-xs pt-1">
           <div id="readerAuthor" class="font-medium text-slate-400 flex items-center gap-1.5"></div>
-          <a id="readerSourceBtn" href="#" target="_blank" rel="noopener" class="btn-ghost px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs text-indigo-300 hover:text-white border-indigo-500/30">
-            <span>Ouvrir la source</span>
-            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-          </a>
+          <div class="flex items-center gap-2">
+            <button onclick="openShareModalForArticle(activeReaderArticleId)" class="btn-action-ghost px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs text-indigo-300 hover:text-white border-indigo-500/30">
+              <i class="fa-solid fa-share-nodes text-[10px]"></i>
+              <span>Partager</span>
+            </button>
+            <a id="readerSourceBtn" href="#" target="_blank" rel="noopener" class="btn-ghost px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs text-indigo-300 hover:text-white border-indigo-500/30">
+              <span>Ouvrir la source</span>
+              <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+            </a>
+          </div>
         </div>
       </div>
 
@@ -889,10 +895,16 @@
 
       <!-- Reader Footer -->
       <div class="pt-4 mt-4 border-t border-slate-800 flex items-center justify-between text-xs">
-        <button id="readerFavBtn" onclick="toggleReaderFavorite()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 font-medium flex items-center gap-2 border border-slate-700">
-          <i class="fa-solid fa-star"></i>
-          <span id="readerFavText">Favori</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <button id="readerFavBtn" onclick="toggleReaderFavorite()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 font-medium flex items-center gap-2 border border-slate-700">
+            <i class="fa-solid fa-star"></i>
+            <span id="readerFavText">Favori</span>
+          </button>
+          <button onclick="openShareModalForArticle(activeReaderArticleId)" class="px-3.5 py-2 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 font-medium flex items-center gap-2 border border-indigo-500/30 transition">
+            <i class="fa-solid fa-share-nodes text-xs"></i>
+            <span>Partager / Exporter</span>
+          </button>
+        </div>
         <button onclick="closeReaderModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-5 py-2 rounded-xl shadow-lg shadow-indigo-600/30">
           Fermer
         </button>
@@ -937,6 +949,71 @@
             Sauvegarder
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Share & Export Snippets -->
+  <div id="shareModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl p-6 relative overflow-hidden flex flex-col max-h-[90vh]">
+      <button onclick="closeShareModal()" class="absolute right-4 top-4 text-slate-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] w-8 h-8 rounded-lg flex items-center justify-center border border-white/[0.08] transition">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+
+      <div class="flex items-center space-x-3 mb-4 pr-10">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30 shrink-0">
+          <i class="fa-solid fa-share-nodes text-lg"></i>
+        </div>
+        <div class="min-w-0">
+          <h3 id="shareModalTitle" class="text-base font-bold text-white truncate">Partager & Exporter</h3>
+          <p id="shareModalSubtitle" class="text-xs text-slate-400 truncate max-w-md">Lien direct et formats d'exportation pour presse-papier</p>
+        </div>
+      </div>
+
+      <div class="space-y-4 overflow-y-auto pr-1">
+        <!-- Direct Link Section -->
+        <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+          <label class="block text-xs font-semibold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+            <i class="fa-solid fa-link text-indigo-400"></i> Lien de Partage Direct (Permalink)
+          </label>
+          <div class="flex gap-2">
+            <input type="text" id="shareLinkInput" readonly class="flex-1 bg-slate-900 text-xs text-slate-200 px-3 py-2 rounded-xl border border-slate-700 font-mono select-all focus:outline-none">
+            <button onclick="copyShareLinkInput()" class="btn-primary text-xs font-semibold px-4 py-2 rounded-xl flex items-center gap-1.5 shrink-0">
+              <i class="fa-solid fa-copy text-xs"></i>
+              <span>Copier le lien</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Export Tabs Switcher -->
+        <div class="flex items-center bg-black/40 p-1 rounded-xl border border-white/[0.06]">
+          <button id="shareTabMarkdown" onclick="setShareFormat('markdown')" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition bg-indigo-950 text-indigo-300 border border-indigo-800/40">
+            <i class="fa-brands fa-markdown text-indigo-400 text-sm"></i>
+            <span>Format Markdown</span>
+          </button>
+          <button id="shareTabHtml" onclick="setShareFormat('html')" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition text-slate-400 hover:text-white">
+            <i class="fa-solid fa-code text-cyan-400 text-sm"></i>
+            <span>Format HTML</span>
+          </button>
+        </div>
+
+        <!-- Format Preview & Copy -->
+        <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <span id="shareFormatLabel" class="text-xs font-semibold text-slate-300">Aperçu du snippet Markdown</span>
+            <button id="copySnippetBtn" onclick="copyCurrentShareSnippet()" class="btn-action-primary text-xs font-semibold px-3.5 py-1.5 rounded-xl flex items-center gap-1.5">
+              <i class="fa-solid fa-clipboard text-xs"></i>
+              <span>Copier le snippet</span>
+            </button>
+          </div>
+          <textarea id="shareSnippetTextarea" readonly rows="8" class="w-full bg-slate-900 text-xs font-mono text-slate-200 p-3 rounded-xl border border-slate-800 focus:outline-none resize-none leading-relaxed select-all"></textarea>
+        </div>
+      </div>
+
+      <div class="pt-4 mt-4 border-t border-slate-800 flex justify-end">
+        <button onclick="closeShareModal()" class="btn-action-ghost text-xs px-4 py-2 rounded-xl font-medium">
+          Fermer
+        </button>
       </div>
     </div>
   </div>
@@ -1440,6 +1517,15 @@ ${escapeHtml(data.newsletter_markdown)}
         submitRadarSearch();
       }
 
+      // Check if URL contains ?article=ID permalink
+      const articleParam = urlParams.get('article') || urlParams.get('article_id');
+      if (articleParam) {
+        const articleId = parseInt(articleParam, 10);
+        if (!isNaN(articleId)) {
+          openArticlePermalink(articleId);
+        }
+      }
+
       const searchInput = document.getElementById('searchInput');
       const clearBtn = document.getElementById('clearSearchBtn');
 
@@ -1687,14 +1773,18 @@ ${escapeHtml(data.newsletter_markdown)}
 
               <!-- Pinned Footer Action Bar -->
               <div class="pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs mt-auto">
-                <div class="flex items-center space-x-2">
-                  <button onclick="openReaderModal(${art.id}, 'full')" class="btn-action-ghost px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5">
+                <div class="flex items-center space-x-1.5 flex-wrap">
+                  <button onclick="openReaderModal(${art.id}, 'full')" class="btn-action-ghost px-2.5 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5">
                     <i class="fa-solid fa-book-open text-[11px] text-slate-400"></i>
                     <span>Lire</span>
                   </button>
-                  <button onclick="openReaderModal(${art.id}, 'summary')" class="btn-action-primary px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5">
+                  <button onclick="openReaderModal(${art.id}, 'summary')" class="btn-action-primary px-2.5 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5">
                     <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i>
                     <span>Résumé IA</span>
+                  </button>
+                  <button onclick="openShareModalForArticle(${art.id})" class="btn-action-ghost px-2.5 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1 text-indigo-300 hover:text-white" title="Partager / Exporter">
+                    <i class="fa-solid fa-share-nodes text-[10px]"></i>
+                    <span>Partager</span>
                   </button>
                 </div>
                 <button onclick="openNotesModal(${art.id})" class="btn-action-ghost p-1.5 rounded-xl text-slate-400 hover:text-indigo-300 transition" title="Éditer la note" aria-label="Éditer la note">
@@ -2256,9 +2346,9 @@ ${escapeHtml(data.newsletter_markdown)}
                   <i class="fa-solid fa-arrows-rotate text-[10px]"></i> Actualiser
                 </button>
 
-                <!-- Share Link Button -->
-                <button onclick="copyRadarShareLink('${escapeHtml(data.entity)}')" class="btn-action-ghost text-xs font-medium px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition">
-                  <i class="fa-solid fa-link text-indigo-400 text-xs"></i> Copier le lien
+                <!-- Share & Export Button -->
+                <button onclick="openShareModalForReportEntity('${escapeHtml(data.entity)}')" class="btn-action-ghost text-xs font-medium px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition text-indigo-300 hover:text-white border-indigo-500/30">
+                  <i class="fa-solid fa-share-nodes text-indigo-400 text-xs"></i> Partager & Exporter
                 </button>
               </div>
             </div>
@@ -2459,12 +2549,15 @@ ${escapeHtml(data.newsletter_markdown)}
                 </div>
 
                 <div class="flex items-center justify-between pt-3 border-t border-white/[0.05] text-xs">
-                  <div class="flex items-center gap-2">
-                    <button onclick="viewSavedRadarReport('${escapeHtml(group.entity)}')" class="btn-action-ghost text-emerald-400 hover:text-white px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 text-[11px] transition">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <button onclick="viewSavedRadarReport('${escapeHtml(group.entity)}')" class="btn-action-ghost text-emerald-400 hover:text-white px-2 py-1 rounded-lg font-medium flex items-center gap-1 text-[11px] transition">
                       <i class="fa-solid fa-eye text-[9px]"></i> Consulter
                     </button>
-                    <button onclick="refreshCurrentRadarEntity('${escapeHtml(group.entity)}')" class="btn-action-ghost text-indigo-300 hover:text-white px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 text-[11px] transition" title="Actualiser l'analyse">
-                      <i class="fa-solid fa-arrows-rotate text-[9px]"></i> Actualiser
+                    <button onclick="openShareModalForReportEntity('${escapeHtml(group.entity)}')" class="btn-action-ghost text-indigo-300 hover:text-white px-2 py-1 rounded-lg font-medium flex items-center gap-1 text-[11px] transition" title="Partager ou exporter">
+                      <i class="fa-solid fa-share-nodes text-[9px]"></i> Partager
+                    </button>
+                    <button onclick="refreshCurrentRadarEntity('${escapeHtml(group.entity)}')" class="btn-action-ghost text-slate-400 hover:text-white px-2 py-1 rounded-lg font-medium flex items-center gap-1 text-[11px] transition" title="Actualiser l'analyse">
+                      <i class="fa-solid fa-arrows-rotate text-[9px]"></i>
                     </button>
                   </div>
                   <button onclick="deleteRadarEntity('${escapeHtml(group.entity)}')" class="text-slate-600 hover:text-rose-400 p-1.5 transition rounded-md hover:bg-white/[0.04]" title="Supprimer tout l'historique de cette entité">
@@ -2515,6 +2608,270 @@ ${escapeHtml(data.newsletter_markdown)}
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
+    }
+
+    let activeShareItem = null;
+
+    async function copyToClipboard(text, successMsg = 'Copié dans le presse-papier !') {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+        showToast(successMsg);
+      } catch (err) {
+        console.error('Clipboard error:', err);
+        showToast('Erreur lors de la copie dans le presse-papier.', 'error');
+      }
+    }
+
+    async function openShareModalForArticle(id) {
+      if (!id) return;
+      let art = articlesData.find(a => a.id === id);
+      if (!art) {
+        try {
+          const res = await fetch(`/api/articles/${id}`);
+          if (res.ok) art = await res.json();
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      if (!art) {
+        showToast('Article introuvable.', 'error');
+        return;
+      }
+
+      const permalink = window.location.origin + window.location.pathname + '?article=' + art.id;
+
+      const cleanTitle = cleanMarkdown(art.title || 'Sans titre');
+      const cleanSummary = cleanMarkdown(art.summary || '');
+      const cleanAuthor = cleanMarkdown(art.author || '');
+      const cleanNotes = cleanMarkdown(art.notes || '');
+      const cleanContent = (art.content || '').trim();
+
+      const dateStr = new Date(art.created_at || Date.now()).toLocaleDateString('fr-FR', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      });
+
+      const markdownSnippet = [
+        `# ${cleanTitle}`,
+        ``,
+        `**Source:** [${art.site_name || 'Web'}](${art.url || permalink}) | **Auteur:** ${cleanAuthor || 'N/A'} | **Catégorie:** ${art.category || 'Général'} | **Date:** ${dateStr}`,
+        ``,
+        `## Résumé`,
+        cleanSummary || 'Aucun résumé disponible.',
+        ``,
+        cleanNotes ? `## Notes personnelles\n${cleanNotes}\n` : '',
+        cleanContent && cleanContent.length > 50 ? `## Contenu\n${cleanContent}\n` : '',
+        `---`,
+        `*Lien de partage : ${permalink}*`,
+        `*Partagé via SYNAPSE - Hub de Veille Technologique*`
+      ].filter(Boolean).join('\n');
+
+      const htmlSnippet = `<article class="synapse-article" style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; line-height: 1.6;">
+  <h1 style="color: #4f46e5; margin-bottom: 8px; font-size: 1.25rem;"><a href="${escapeHtml(art.url || permalink)}" style="text-decoration: none; color: inherit;">${escapeHtml(cleanTitle)}</a></h1>
+  <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">
+    <strong>Source:</strong> ${escapeHtml(art.site_name || 'Web')} |
+    <strong>Auteur:</strong> ${escapeHtml(cleanAuthor || 'N/A')} |
+    <strong>Catégorie:</strong> ${escapeHtml(art.category || 'Général')} |
+    <strong>Date:</strong> ${escapeHtml(dateStr)}
+  </p>
+  <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border-left: 4px solid #6366f1; margin-bottom: 16px;">
+    <h2 style="font-size: 0.95rem; margin-top: 0; color: #1e1b4b; margin-bottom: 8px;">Résumé</h2>
+    <p style="margin-bottom: 0; font-size: 0.9rem; color: #334155;">${escapeHtml(cleanSummary || 'Aucun résumé')}</p>
+  </div>
+  ${cleanNotes ? `<div style="background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-style: italic; font-size: 0.85rem; color: #475569;"><strong>Notes :</strong> ${escapeHtml(cleanNotes)}</div>` : ''}
+  <footer style="margin-top: 20px; font-size: 0.8rem; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+    <p><a href="${escapeHtml(permalink)}" style="color: #6366f1; text-decoration: none; font-weight: 500;">Consulter cet article sur SYNAPSE ↗</a></p>
+  </footer>
+</article>`;
+
+      activeShareItem = {
+        type: 'article',
+        title: cleanTitle,
+        permalink: permalink,
+        markdown: markdownSnippet,
+        html: htmlSnippet,
+        currentFormat: 'markdown'
+      };
+
+      renderShareModal();
+    }
+
+    async function openShareModalForReportEntity(entity) {
+      if (!entity) return;
+      let data = currentRadarData;
+      if (!data || (data.entity || '').toLowerCase() !== entity.toLowerCase()) {
+        try {
+          const res = await fetch(`/api/sentiment/reports/${encodeURIComponent(entity)}`);
+          if (res.ok) data = await res.json();
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (!data) {
+        showToast('Rapport introuvable.', 'error');
+        return;
+      }
+
+      const permalink = window.location.origin + window.location.pathname + '?radar=' + encodeURIComponent(data.entity);
+      const score = data.sentiment_score || 50;
+      const label = data.sentiment_label || 'Neutre';
+      const dateStr = data.created_at ? data.created_at.slice(0, 16).replace('T', ' ') : new Date().toISOString().slice(0, 16).replace('T', ' ');
+
+      const prosList = (data.pros || []).map(p => typeof p === 'string' ? p : (p.point || '')).filter(Boolean);
+      const consList = (data.cons || []).map(c => typeof c === 'string' ? c : (c.point || '')).filter(Boolean);
+
+      const markdownSnippet = [
+        `# Rapport d'Opinion : ${data.entity}`,
+        ``,
+        `**Score de Sentiment :** ${score}% (${label}) | **Horodaté :** ${dateStr}`,
+        ``,
+        `## Synthèse`,
+        data.summary || '',
+        ``,
+        data.news_and_trends ? `## Actualités & Discussions\n${data.news_and_trends}\n` : '',
+        `## Points Forts (Pros)`,
+        prosList.length > 0 ? prosList.map(p => `- ${p}`).join('\n') : '- Aucun point majeur',
+        ``,
+        `## Points Faibles & Limites (Cons)`,
+        consList.length > 0 ? consList.map(c => `- ${c}`).join('\n') : '- Aucun risque majeur',
+        ``,
+        `---`,
+        `*Lien de partage : ${permalink}*`,
+        `*Généré via SYNAPSE Deep Research Radar & Sentiment*`
+      ].filter(Boolean).join('\n');
+
+      const htmlSnippet = `<section class="synapse-report" style="font-family: system-ui, -apple-system, sans-serif; max-width: 650px; margin: 0 auto; color: #1e293b; line-height: 1.6;">
+  <h1 style="color: #059669; border-bottom: 2px solid #10b981; padding-bottom: 8px; font-size: 1.3rem;">Rapport d'Opinion : ${escapeHtml(data.entity)}</h1>
+  <p style="font-size: 0.85rem; color: #475569; margin-bottom: 16px;">
+    <strong>Score de Sentiment :</strong> <span style="color: #059669; font-weight: bold;">${score}% (${escapeHtml(label)})</span> |
+    <strong>Date :</strong> ${escapeHtml(dateStr)}
+  </p>
+  <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 14px; border-radius: 10px; margin-bottom: 16px;">
+    <h3 style="margin-top: 0; color: #065f46; font-size: 0.95rem; margin-bottom: 6px;">Synthèse</h3>
+    <p style="margin-bottom: 0; font-size: 0.875rem; color: #166534; leading-relaxed;">${escapeHtml(data.summary || '')}</p>
+  </div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 12px; border-radius: 8px;">
+      <h4 style="margin-top: 0; color: #047857; font-size: 0.85rem; margin-bottom: 6px;">Points Forts (Pros)</h4>
+      <ul style="padding-left: 18px; margin-bottom: 0; font-size: 0.8rem; color: #065f46;">
+        ${prosList.map(p => `<li style="margin-bottom: 4px;">${escapeHtml(p)}</li>`).join('')}
+      </ul>
+    </div>
+    <div style="background: #fff1f2; border: 1px solid #fecdd3; padding: 12px; border-radius: 8px;">
+      <h4 style="margin-top: 0; color: #be123c; font-size: 0.85rem; margin-bottom: 6px;">Points Faibles (Cons)</h4>
+      <ul style="padding-left: 18px; margin-bottom: 0; font-size: 0.8rem; color: #9f1239;">
+        ${consList.map(c => `<li style="margin-bottom: 4px;">${escapeHtml(c)}</li>`).join('')}
+      </ul>
+    </div>
+  </div>
+  <footer style="font-size: 0.8rem; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+    <p><a href="${escapeHtml(permalink)}" style="color: #10b981; text-decoration: none; font-weight: 500;">Consulter ce rapport interactif sur SYNAPSE ↗</a></p>
+  </footer>
+</section>`;
+
+      activeShareItem = {
+        type: 'report',
+        title: `Rapport : ${data.entity}`,
+        permalink: permalink,
+        markdown: markdownSnippet,
+        html: htmlSnippet,
+        currentFormat: 'markdown'
+      };
+
+      renderShareModal();
+    }
+
+    function renderShareModal() {
+      if (!activeShareItem) return;
+      document.getElementById('shareModalTitle').innerText = `Partager : ${activeShareItem.title}`;
+      document.getElementById('shareModalSubtitle').innerText = activeShareItem.type === 'article' ? "Article / Veille enregistrée" : "Rapport d'opinion Deep Research";
+
+      document.getElementById('shareLinkInput').value = activeShareItem.permalink;
+
+      setShareFormat(activeShareItem.currentFormat || 'markdown');
+      document.getElementById('shareModal').classList.remove('hidden');
+    }
+
+    function setShareFormat(fmt) {
+      if (!activeShareItem) return;
+      activeShareItem.currentFormat = fmt;
+
+      const btnMd = document.getElementById('shareTabMarkdown');
+      const btnHtml = document.getElementById('shareTabHtml');
+      const label = document.getElementById('shareFormatLabel');
+      const textarea = document.getElementById('shareSnippetTextarea');
+
+      if (fmt === 'markdown') {
+        btnMd.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition bg-indigo-950 text-indigo-300 border border-indigo-800/40";
+        btnHtml.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition text-slate-400 hover:text-white";
+        label.innerText = "Snippet au format Markdown";
+        textarea.value = activeShareItem.markdown;
+      } else {
+        btnHtml.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition bg-cyan-950 text-cyan-300 border border-cyan-800/40";
+        btnMd.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition text-slate-400 hover:text-white";
+        label.innerText = "Snippet au format HTML";
+        textarea.value = activeShareItem.html;
+      }
+    }
+
+    function copyShareLinkInput() {
+      const input = document.getElementById('shareLinkInput');
+      if (input && input.value) {
+        copyToClipboard(input.value, 'Lien de partage copié dans le presse-papier !');
+      }
+    }
+
+    function copyCurrentShareSnippet() {
+      const textarea = document.getElementById('shareSnippetTextarea');
+      if (textarea && textarea.value) {
+        const fmtName = (activeShareItem && activeShareItem.currentFormat === 'html') ? 'HTML' : 'Markdown';
+        copyToClipboard(textarea.value, `Snippet ${fmtName} copié dans le presse-papier !`);
+      }
+    }
+
+    function closeShareModal() {
+      document.getElementById('shareModal').classList.add('hidden');
+      activeShareItem = null;
+    }
+
+    async function openArticlePermalink(id) {
+      try {
+        let art = articlesData.find(a => a.id === id);
+        if (!art) {
+          const res = await fetch(`/api/articles/${id}`);
+          if (res.ok) {
+            art = await res.json();
+            if (!articlesData.some(a => a.id === art.id)) {
+              articlesData.unshift(art);
+            }
+          }
+        }
+
+        if (art) {
+          switchTab('articles');
+          const badge = document.getElementById('activeFilterBadge');
+          if (badge) {
+            badge.innerText = `Lien partagé #${art.id}`;
+            badge.classList.remove('hidden');
+          }
+          openReaderModal(art.id);
+        } else {
+          showToast(`Article #${id} introuvable.`, 'error');
+        }
+      } catch (err) {
+        console.error('Erreur ouverture permalink article:', err);
+      }
     }
   </script>
 </body>
