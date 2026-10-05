@@ -42,6 +42,62 @@
         }
       }
     },
+    "/api/whatsapp/sync": {
+      "get": {
+        "summary": "Sync Whatsapp Inbox Endpoint",
+        "description": "Syncs un-processed WhatsApp messages from the SYNAPSE group and ingests new links.",
+        "operationId": "sync_whatsapp_inbox_endpoint_api_whatsapp_sync_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ingestion/whatsapp": {
+      "post": {
+        "summary": "Receive Whatsapp Message",
+        "description": "Receives a new WhatsApp message (from bridge daemon or webhook) and stores it in the inbox.",
+        "operationId": "receive_whatsapp_message_api_ingestion_whatsapp_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/articles": {
       "post": {
         "summary": "Create Article",
